@@ -1,149 +1,189 @@
-# workflow-utils (Scala 3)
+# workflow-utils
 
-Lightweight utilities and service clients used to build AWFL workflows in Scala 3. This module was split out of the older monorepo and now provides only the shared helpers that other workflow modules import.
+Utilities and service clients for building AWFL workflows in Scala 3. Compact, dependency-light, and designed to be composed with the AWFL DSL.
 
-What this module includes
+![Scala 3.3.1](https://img.shields.io/badge/Scala-3.3.1-red?logo=scala)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Status: snapshot](https://img.shields.io/badge/status-snapshot-orange)
+
+
+Contents
+
+- Features
+- Installation
+- Requirements
+- Quick start
+- Package overview
+- Building locally
+- Contributing
+- License
+
+
+Features
 
 - DSL-friendly service clients
-  - us.awfl.services.Llm: chat, JSON-mode chat, and tool-enabled chat against the AWFL LLM service
-  - us.awfl.services.Context: read topic context and ista documents from the Context service
-  - us.awfl.services.Firebase, GoogleStorage: primitives used by utilities (locks, storage)
+  - us.awfl.services.Llm — chat, JSON-mode chat, and tool-enabled chat via the AWFL LLM service
+  - us.awfl.services.Context — read topic context and ista documents
+  - us.awfl.services.Firebase, GoogleStorage — primitives used by utilities (locks, storage)
 - Workflow utilities
-  - us.awfl.utils.Events: enqueue status and assistant messages via the awfl-relay ingest endpoint
-  - us.awfl.utils.Locks: Firestore-backed distributed locks (with TTL) tailored for workflow concurrency control
-  - us.awfl.utils.YojComposer: compose TopicContextYoj component trees into ChatMessage lists
+  - us.awfl.utils.Events — enqueue status and assistant messages via the awfl-relay ingest endpoint
+  - us.awfl.utils.Locks — Firestore-backed distributed locks with TTL for workflow concurrency control
+  - us.awfl.utils.YojComposer — compose TopicContextYoj component trees into ChatMessage lists
   - us.awfl.utils.Http, Exec, Env, Cache, Zip, Segments, Prakriya, Timestamped
-  - us.awfl.utils.strider: Strider helpers for backfills and stream processing
-- Data models used by the utilities and services
-  - us.awfl.ista.ChatMessage, ToolCall, and helpers used across clients and utilities
+  - us.awfl.utils.strider — helpers for backfills and stream processing
+- Data models used by clients/utilities
+  - us.awfl.ista.ChatMessage, ToolCall, and related helpers
 
-This module is published for Scala 3.3.1 and depends on the AWFL DSL library (us.awfl:dsl).
-
-Install
-
-sbt (recommended)
-
-- Add the dependency to your project:
-
-  libraryDependencies += "us.awfl" %% "workflow-utils" % "0.1.0-SNAPSHOT"
-
-- If you are working locally with this repo, publish it to your Ivy cache and then depend on it:
-
-  sbt +publishLocal
-
-  // in your consuming project
-  libraryDependencies += "us.awfl" %% "workflow-utils" % "0.1.0-SNAPSHOT"
-
-Note: This library expects the AWFL backend services to be available (e.g., llm/chat, context/*, relay ingest). Without those endpoints, the HTTP clients will return errors at runtime.
-
-Scala and dependencies
+Compatibility
 
 - Scala: 3.3.1
 - Organization: us.awfl
-- Module name: workflow-utils
-- Depends on: "us.awfl" %% "dsl" % "0.1.0-SNAPSHOT"
+- Module: workflow-utils
+- Depends on: us.awfl %% dsl % 0.1.0-SNAPSHOT
 
-Quick start examples
 
-All examples use the AWFL DSL. Import the DSL and givens first:
+Installation
 
-- Imports
+sbt
 
-  import us.awfl.dsl._
-  import us.awfl.dsl.CelOps._
-  import us.awfl.dsl.auto.given
+- Add the dependency:
 
-  // Common data types used below
-  import us.awfl.ista.ChatMessage
+```scala
+libraryDependencies += "us.awfl" %% "workflow-utils" % "0.1.0-SNAPSHOT"
+```
 
-- LLM chat (text)
+- Working with a local checkout: publish to your Ivy cache, then depend on it from the consuming project.
 
-  import us.awfl.services.Llm
+```bash
+sbt +publishLocal
+```
 
-  val msgs = buildList("msgs", List(ChatMessage("user", str("Hello!"))))
-  val chat = Llm.chat(
-    name = "demo_chat",
-    messages = msgs.resultValue
-  )
-  // chat is a Step (HTTP POST to llm/chat). You can compose it in a Block with other steps.
+```scala
+// in your consuming build
+libraryDependencies += "us.awfl" %% "workflow-utils" % "0.1.0-SNAPSHOT"
+```
 
-- LLM chat to JSON
+Note: This module is currently published as a SNAPSHOT. APIs may change before the first stable release.
 
-  import us.awfl.services.Llm
 
-  case class Person(name: Field, age: Field)
-  // Provide/derive an implicit Spec[Person] as required by the DSL in your codebase
-  val msgs = buildList("msgs", List(ChatMessage("user", str("Return a JSON person"))))
-  val toJson = Llm.chatJson[Person](
-    name = "person_json",
-    messages = msgs.resultValue
-  )
+Requirements
 
-- Context reads (yoj/ista)
+This library issues HTTP calls to AWFL backend services (e.g., llm/chat, context/*, relay ingest). Ensure those endpoints are reachable from your environment. Without them, HTTP client steps will error at runtime.
 
-  import us.awfl.services.Context
-  import us.awfl.utils.Env
+Many helpers rely on Env (sessionId, projectId, userId, background). Configure these in your host application.
 
-  // Choose a Kala for the read (segment-scoped example)
-  val kala = Context.segKala(Env.sessionId, obj(1720000000.0), obj(3600.0))
-  // Read a list of documents of your domain type T (requires a Spec[T])
-  val readNotes = Context.yojRead[ChatMessage](
-    name = "read_notes",
-    yojName = str("messages"),
-    kala = kala
-  )
 
-- Distributed locks
+Quick start
 
-  import us.awfl.utils.Locks
-  import us.awfl.utils.{SegKala, KalaVibhaga}
+All examples use the AWFL DSL. Import the DSL and givens first.
 
-  given KalaVibhaga = SegKala(Env.sessionId, obj(1720000000.0), obj(300.0))
+```scala
+import us.awfl.dsl._
+import us.awfl.dsl.CelOps._
+import us.awfl.dsl.auto.given
+import us.awfl.ista.ChatMessage
+```
 
-  val lockKey = Locks.key("reports")
-  val acquired = Locks.acquireBool(
-    stepName = "reports_lock",
-    key = lockKey,
-    owner = str("worker-1"),
-    ttlSeconds = 60
-  )
-  // acquired.resultValue is a BaseValue[Boolean] telling you if the lock was obtained
+LLM chat (text)
 
-- Enqueue events to relay
+```scala
+import us.awfl.services.Llm
 
-  import us.awfl.utils.Events
-  import us.awfl.ista.{ToolCall, ToolCallFunction}
+val msgs = buildList("msgs", List(ChatMessage("user", str("Hello!"))))
+val chat = Llm.chat(
+  name = "demo_chat",
+  messages = msgs.resultValue
+)
+// chat is a Step (HTTP POST to llm/chat)
+```
 
-  val toolCall = obj(ToolCall(
-    id = str("id-1"),
-    `type` = "function",
-    function = obj(ToolCallFunction(str("noop"), str("{}")))
-  ))
+LLM chat to JSON
 
-  val enqueue = Events.enqueueResponse(
-    opName = "demo",
-    callback_url = str("https://example.com/callback"),
-    content = str("ok"),
-    toolCall = toolCall,
-    cost = obj(0.0)
-  )
+```scala
+import us.awfl.services.Llm
 
-- Compose TopicContextYoj into chat messages
+case class Person(name: Field, age: Field)
+// Provide/derive an implicit Spec[Person] as required by the DSL in your codebase
+val msgs = buildList("msgs", List(ChatMessage("user", str("Return a JSON person"))))
+val toJson = Llm.chatJson[Person](
+  name = "person_json",
+  messages = msgs.resultValue
+)
+```
 
-  import us.awfl.utils.YojComposer
-  import us.awfl.utils.{SegKala, KalaVibhaga}
+Context reads (yoj/ista)
 
-  given KalaVibhaga = SegKala(Env.sessionId, obj(1720000000.0), obj(3600.0))
+```scala
+import us.awfl.services.Context
+import us.awfl.utils.Env
 
-  // Build a single-root Yoj model with no child components (supply your children as needed)
-  val msgsFromContext = YojComposer.composed(
-    name = "demo_composer",
-    childComponents = Nil,
-    intro = Some("Context messages below"),
-    promoteUpstream = true
-  )
+val kala = Context.segKala(Env.sessionId, obj(1720000000.0), obj(3600.0))
+val readNotes = Context.yojRead[ChatMessage](
+  name = "read_notes",
+  yojName = str("messages"),
+  kala = kala
+)
+```
 
-Package layout (this module only)
+Distributed locks
+
+```scala
+import us.awfl.utils.Locks
+import us.awfl.utils.{SegKala, KalaVibhaga}
+import us.awfl.utils.Env
+
+given KalaVibhaga = SegKala(Env.sessionId, obj(1720000000.0), obj(300.0))
+
+val lockKey = Locks.key("reports")
+val acquired = Locks.acquireBool(
+  stepName = "reports_lock",
+  key = lockKey,
+  owner = str("worker-1"),
+  ttlSeconds = 60
+)
+// acquired.resultValue is a BaseValue[Boolean]
+```
+
+Enqueue events to relay
+
+```scala
+import us.awfl.utils.Events
+import us.awfl.ista.{ToolCall, ToolCallFunction}
+
+val toolCall = obj(ToolCall(
+  id = str("id-1"),
+  `type` = "function",
+  function = obj(ToolCallFunction(str("noop"), str("{}")))
+))
+
+val enqueue = Events.enqueueResponse(
+  opName = "demo",
+  callback_url = str("https://example.com/callback"),
+  content = str("ok"),
+  toolCall = toolCall,
+  cost = obj(0.0)
+)
+```
+
+Compose TopicContextYoj into chat messages
+
+```scala
+import us.awfl.utils.YojComposer
+import us.awfl.utils.{SegKala, KalaVibhaga}
+import us.awfl.utils.Env
+
+given KalaVibhaga = SegKala(Env.sessionId, obj(1720000000.0), obj(3600.0))
+
+val msgsFromContext = YojComposer.composed(
+  name = "demo_composer",
+  childComponents = Nil,
+  intro = Some("Context messages below"),
+  promoteUpstream = true
+)
+```
+
+
+Package overview
 
 - src/main/scala/us/awfl/services
   - Context.scala — client for /context endpoints (yoj/ista read)
@@ -158,16 +198,18 @@ Package layout (this module only)
 - src/main/scala/us/awfl/ista
   - Convo.scala — ChatMessage, ToolCall, and related models
 
+
 Building locally
 
 - Clone this repo
 - sbt compile
 - sbt +publishLocal to use in other local projects
 
-Notes
 
-- Examples above show how to construct Steps; integrate them into your own Blocks and workflows per the AWFL DSL
-- Many utilities rely on Env (sessionId, projectId, userId, background). Configure these in your host application as appropriate
+Contributing
+
+Issues and pull requests are welcome. If you plan a larger change, please open an issue first to discuss scope and approach.
+
 
 License
 

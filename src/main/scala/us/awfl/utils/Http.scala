@@ -6,7 +6,7 @@ import io.circe.generic.auto._
 import io.circe.Encoder
 
 // Use plural jobs prefix for all HTTP calls and OIDC audience
-case class Auth(`type`: String = "OIDC", audience: BaseValue[String] = str(Env.BASE_URL.cel + ("/jobs": Cel)))
+case class Auth(`type`: String = "OIDC", audience: BaseValue[String] = Env.BASE_URL)
 
 type Post[Out] = Step[PostResult[Out], Resolved[PostResult[Out]]] with ValueStep[PostResult[Out]]
 
@@ -30,7 +30,7 @@ implicit def postResult[T: Spec]: Spec[PostResult[T]] = Spec { resolver =>
 
 // POST helpers
 def postV[In, Out: Spec](name: String, urlPath: BaseValue[String], body: BaseValue[In], auth: Auth = Auth()): Post[Out] = {
-  val absUrl: Value[String] = str(Env.BASE_URL.cel + ("/jobs/": Cel) + urlPath.cel)
+  val absUrl: Value[String] = str(Env.BASE_URL.cel + ("/": Cel) + urlPath.cel)
   val postArgs = PostRequest[In](
     url = absUrl,
     body = body,
@@ -44,7 +44,7 @@ def post[In, Out: Spec](name: String, relativePath: String, body: BaseValue[In],
 
 // GET helpers
 def getV[Out: Spec](name: String, urlPath: BaseValue[String], auth: Auth = Auth()): Get[Out] = {
-  val absUrl: Value[String] = str(Env.BASE_URL.cel + ("/jobs/": Cel) + urlPath.cel)
+  val absUrl: Value[String] = str(Env.BASE_URL.cel + ("/": Cel) + urlPath.cel)
   val getArgs = GetRequest(
     url = absUrl,
     auth = auth
@@ -60,7 +60,7 @@ def get[Out: Spec](name: String, relativePath: String, auth: Auth): Get[Out] =
 
 // PATCH helpers
 def patchV[In, Out: Spec](name: String, urlPath: BaseValue[String], body: BaseValue[In], auth: Auth = Auth()): Patch[Out] = {
-  val absUrl: Value[String] = str(Env.BASE_URL.cel + ("/jobs/": Cel) + urlPath.cel)
+  val absUrl: Value[String] = str(Env.BASE_URL.cel + ("/": Cel) + urlPath.cel)
   val patchArgs = PostRequest[In](
     url = absUrl,
     body = body,

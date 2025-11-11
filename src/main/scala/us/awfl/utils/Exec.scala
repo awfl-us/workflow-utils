@@ -145,9 +145,9 @@ object Exec {
   ) = {
     Events.enqueueResponse(
       s"${name}",
-      callback_url = Field.str(""),
-      content = Value("null"),
-      toolCall = Value("null"),
+      callback_id = Value.nil,
+      content = Value.nil,
+      toolCall = Value.nil,
       cost = Value(0.0),
       status = status,
       error = error

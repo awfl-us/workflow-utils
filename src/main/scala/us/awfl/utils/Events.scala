@@ -10,7 +10,7 @@ object Events {
   // Event payload delivered to CLI via awfl-relay (data field)
   case class OperationEnvelope(
     create_time: BaseValue[String],
-    callback_url: BaseValue[String],
+    callback_id: BaseValue[String],
     content: BaseValue[String],
     tool_call: BaseValue[ToolCall],
     cost: BaseValue[Double],
@@ -51,7 +51,7 @@ object Events {
   // Fire-and-forget enqueue for non-tool assistant content or status updates via awfl-relay
   def enqueueResponse(
     opName: String,
-    callback_url: BaseValue[String],
+    callback_id: BaseValue[String],
     content: BaseValue[String],
     toolCall: BaseValue[ToolCall],
     cost: BaseValue[Double],
@@ -62,7 +62,7 @@ object Events {
   ): Step[NoValueT, BaseValue[NoValueT]] = {
     val opEnvelopeField = OperationEnvelope(
       create_time = Value("sys.now()"),
-      callback_url = callback_url,
+      callback_id = callback_id,
       content = content,
       tool_call = toolCall,
       cost = cost,
