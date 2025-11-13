@@ -28,7 +28,9 @@ publishMavenStyle := true
 
 // Dependencies
 libraryDependencies ++= Seq(
-  "us.awfl" %% "dsl" % "0.1.1"
+  "us.awfl" %% "dsl" % "0.1.2"
 )
+
+// dependencyOverrides += "us.awfl" %% "dsl" % "0.1.0-SNAPSHOT"
 
 scalacOptions ++= Seq("-deprecation", "-feature", "-language:implicitConversions")
