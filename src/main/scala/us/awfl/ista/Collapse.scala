@@ -47,6 +47,7 @@ object CollapseResponse {
             - Do not collapse messages relevant to the current task/discussion or possibly relevant to near-future development. These should not be collapsed!
             - Do not return any groups with empty message list, that defeats the purpose of collapsing the messages.
             - Be fiarly aggressive because reduntant or unneeded information cloggs context. Aim for getting the total context to less than 15k tokens, an exception would be complex, crucial moments of an important task. Otherwise, stay focused on quality of production, but tay midful to the overall vision.
+            - NEVER collapse the most recent response(s)! That will be relevant for futher follow-up questions.
             """.stripMargin
           )
         )

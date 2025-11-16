@@ -26,6 +26,11 @@ ThisBuild / developers := List(
 ThisBuild / pomIncludeRepository := { _ => false }
 publishMavenStyle := true
 
+ThisBuild / version ~= { v =>
+  if (sys.env.get("CI").contains("true")) v
+  else "0.1.0-SNAPSHOT"
+}
+
 // Dependencies
 libraryDependencies ++= Seq(
   "us.awfl" %% "dsl" % "0.1.2"

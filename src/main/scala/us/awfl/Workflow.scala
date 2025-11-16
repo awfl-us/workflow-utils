@@ -1,8 +1,8 @@
 package us.awfl.core
 
-import us.awfl.dsl
+import us.awfl.dsl._
 import us.awfl.dsl.auto.given
-import us.awfl.dsl.stringSpec
+import us.awfl.dsl.{Workflow => DslWorkflow}
 import us.awfl.utils.Exec
 import us.awfl.utils.Env
 
@@ -10,12 +10,12 @@ trait Workflow {
   type Input
   type Result
 
-  val inputVal: dsl.BaseValue[Input]
+  val inputVal: BaseValue[Input]
   lazy val input = inputVal.get
 
-  // lazy val sessionId = dsl.Value[String](dsl.CelFunc("map.get", inputVal.cel, "sessionId"))
+  // lazy val sessionId = Value[String](CelFunc("map.get", inputVal.cel, "sessionId"))
 
-  def workflows: List[dsl.Workflow[_]] = List()
+  def workflows: List[DslWorkflow[_]] = List()
 
   def workflowName: String = {
     val name = this.getClass.getName
@@ -23,13 +23,13 @@ trait Workflow {
     noPrefix.replace('.', '-').stripSuffix("$")
   }
 
-  def buildSteps[T: dsl.Spec](
-    main: (List[dsl.Step[_, _]], dsl.BaseValue[T]),
-    except: dsl.Resolved[dsl.Error] => (List[dsl.Step[_, _]], dsl.BaseValue[T])
-  ): (List[dsl.Step[_, _]], dsl.BaseValue[T]) = {
+  def buildSteps[T: Spec](
+    main: (List[Step[_, _]], BaseValue[T]),
+    except: Resolved[Error] => (List[Step[_, _]], BaseValue[T])
+  ): (List[Step[_, _]], BaseValue[T]) = {
     // Resolve execution IDs
-    val triggeredExecId: dsl.Value[String] = Exec.currentExecId
-    val callingExecId: dsl.BaseValue[String] = Env.callingWorkflowExec.getOrElse(dsl.Value.nil)
+    val triggeredExecId: Value[String] = Exec.currentExecId
+    val callingExecId: BaseValue[String] = Env.callingWorkflowExec.getOrElse(Value.nil)
 
     // 1) Register this execution under the session (idempotent create -> update on 409)
     val registerExecForSession = Exec.registerExecForSession(
@@ -45,19 +45,32 @@ trait Workflow {
     )
 
     val (steps, result) = main
-    dsl.Try(
+    Try(
       "mainTry",
       (registerExecForSession :: registerWorkflowExecLink :: steps) -> result,
       { err =>
+        val errMsg = str(CelFunc(
+          "default",
+          CelFunc(
+            "default",
+            CelFunc(
+              "default",
+              CelFunc("map.get", err.cel, CelConst("""["body", "error", "message"]""")),
+              CelFunc("map.get", err.cel, CelConst("""["body", "error"]"""))
+            ),
+            CelFunc("map.get", err.cel, "message")
+          ),
+          "Unknown error"
+        ))
         val (exceptSteps, exceptResult) = except(err)
-        (exceptSteps :+ dsl.Raise("ReRaise_error", err)) -> exceptResult
+        (exceptSteps :+ Raise("ReRaise_error", err)) -> exceptResult
       }
     ).fn
   }
 
-  def execute[In, Out: dsl.Spec](wfName: String, input: dsl.BaseValue[In]): dsl.Call[dsl.RunWorkflowArgs[In], Out] = {
-    val args = dsl.RunWorkflowArgs(dsl.str(s"${wfName}$${WORKFLOW_ENV}"), input)
+  def execute[In, Out: Spec](wfName: String, input: BaseValue[In]): Call[RunWorkflowArgs[In], Out] = {
+    val args = RunWorkflowArgs(str(s"${wfName}$${WORKFLOW_ENV}"), input)
     val cleanName = wfName.replace('-', '_')
-    dsl.Call(cleanName, "googleapis.workflowexecutions.v1.projects.locations.workflows.executions.run", dsl.obj(args))
+    Call(cleanName, "googleapis.workflowexecutions.v1.projects.locations.workflows.executions.run", obj(args))
   }
 }
