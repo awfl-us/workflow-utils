@@ -49,19 +49,6 @@ trait Workflow {
       "mainTry",
       (registerExecForSession :: registerWorkflowExecLink :: steps) -> result,
       { err =>
-        val errMsg = str(CelFunc(
-          "default",
-          CelFunc(
-            "default",
-            CelFunc(
-              "default",
-              CelFunc("map.get", err.cel, CelConst("""["body", "error", "message"]""")),
-              CelFunc("map.get", err.cel, CelConst("""["body", "error"]"""))
-            ),
-            CelFunc("map.get", err.cel, "message")
-          ),
-          "Unknown error"
-        ))
         val (exceptSteps, exceptResult) = except(err)
         (exceptSteps :+ Raise("ReRaise_error", err)) -> exceptResult
       }
