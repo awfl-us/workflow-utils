@@ -10,18 +10,20 @@ import us.awfl.utils.Ista
 import us.awfl.utils.Convo.SessionId
 import us.awfl.utils.Post
 import us.awfl.utils.Segments
+import us.awfl.utils.Chainable
+import us.awfl.utils.Env
 
 trait ConvoStrider[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out], prompt: Convo.Prompt)
-    extends Strider[In, Out] {
+    extends Strider[In, Out] with Chainable {
   override def kala: KalaVibhaga = StriderObj.segmentKala
 
-  def apply(stepName: String, sessionId: Value[String], windowSeconds: Int = Segments.DefaultWindowSeconds, overlapSeconds: Int = Segments.DefaultOverlapSeconds): Post[Nothing] = {
-    val segments = Segments.forSession("segmentsForSession", sessionId, Value(windowSeconds), Value(overlapSeconds))
+  def apply(stepName: String, windowSeconds: Int = Segments.DefaultWindowSeconds, overlapSeconds: Int = Segments.DefaultOverlapSeconds): Post[Nothing] = {
+    val segments = Segments.forSession("segmentsForSession", Env.sessionId, Value(windowSeconds), Value(overlapSeconds))
     val segment = segments.resultValue(len(segments.resultValue) - 1)
     
     val args = RunWorkflowArgs(
       str(s"${name}-SegKala$${WORKFLOW_ENV}"),
-      obj(StriderInput(sessionId, segment.flatMap(_.end), Value(windowSeconds), Value(overlapSeconds))),
+      obj(StriderInput(segment.flatMap(_.end), Value(windowSeconds), Value(overlapSeconds))),
       connector_params = ConnectorParams(true)
     )
     val call: Post[Nothing] = Call(

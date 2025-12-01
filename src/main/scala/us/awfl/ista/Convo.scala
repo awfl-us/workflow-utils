@@ -10,12 +10,12 @@ import us.awfl.utils.Convo.StepName
 import us.awfl.utils.SegKala
 import us.awfl.utils.Convo
 
-case class ConvoSummary(summary: Field)
+case class ConvoSummary(title: Field, summary: Field)
 
 object ConvoSummary:
   given Ista[ConvoSummary] = Ista("summaries", buildList("buildConvoSummaryIsta", List(ChatMessage("system", str(
     """Summarize the convo, return a JSON in this format:
-    { "summary": "(Summary here)" }
+    { "title": "(short title for the convo, ommit if no information is provided)", "summary": "(Summary here)" }
 
     Don't repeat information already contained in previous summaries and extracted info.
     """.stripMargin

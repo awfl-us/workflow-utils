@@ -5,6 +5,7 @@ import us.awfl.dsl.auto.given
 import us.awfl.dsl.{Workflow => DslWorkflow}
 import us.awfl.utils.Exec
 import us.awfl.utils.Env
+import us.awfl.utils.ENV
 
 trait Workflow {
   type Input

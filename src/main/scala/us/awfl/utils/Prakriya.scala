@@ -92,7 +92,7 @@ object Yoj:
               components = components.resultValue,
               filters = ListValue.empty[TopicContextYoj.FilterSpec]
             )
-          )
+          ).base
         )
 
         val call = TopicContextYoj.runWithModel(model.resultValue)

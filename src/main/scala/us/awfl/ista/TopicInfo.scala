@@ -58,7 +58,7 @@ given Ista[Artifact] = Ista("artifacts", buildList("buildArtifactIsta", List(Cha
   """.stripMargin
 )))))
 
-case class TopicInfo(topics: ListValue[Topic], nuggets: ListValue[Nugget], reflections: ListValue[Reflection], artifacts: ListValue[Artifact])
+case class TopicInfo(topics: ListValue[Topic], nuggets: ListValue[Nugget], reflections: ListValue[Reflection], artifacts: ListValue[Artifact], shouldSaveReflection: BaseValue[Boolean])
 
 object TopicInfo {
   given Ista[TopicInfo] = Ista("topicInfos", {
@@ -74,6 +74,7 @@ object TopicInfo {
         | - nuggets: Usefull nuggets of information to retain.
         | - reflections: Stear your own behavior onto a better heading.
         | - artifacts: Important data chunks to retain.
+        | - shouldSaveReflection: Should we update AGENT.md (or similiar) to better stear futher operations? Can we improve general instructions by adding widely applicable information? Use sparingly so we don't polute our agent files. (boolean)
         """.stripMargin
     ))))
 

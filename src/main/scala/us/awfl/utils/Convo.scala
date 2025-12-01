@@ -11,6 +11,7 @@ import us.awfl.ista.ConvoSummary
 import us.awfl.utils.TopicContextYoj
 import us.awfl.utils.Yoj
 import us.awfl.utils.YojComposer
+import us.awfl.services.Llm.ToolChoice
 
 object Convo {
   def addMessage(name: String, message: BaseValue[ChatMessage], cost: BaseValue[Double] = Value.nil)(using ista: Ista[ChatMessage], kala: KalaVibhaga): Post[Nothing] = {
@@ -36,7 +37,7 @@ object Convo {
     prompt: Prompt,
     yoj: ListValue[ChatMessage],
     tools: ListValue[Tool],
-    toolChoice: BaseValue[String] = Field.str("auto"),
+    toolChoice: BaseValue[ToolChoice] = ToolChoice.auto,
     model: BaseValue[String] = Field.str("gpt-4o"),
     temperature: Double = 0.8,
     maxTokens: BaseValue[Int] = Value("null")

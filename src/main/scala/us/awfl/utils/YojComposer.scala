@@ -38,7 +38,7 @@ object YojComposer {
           components = components.resultValue,
           filters = filters
         )
-      )
+      ).base
     )
 
     val call = TopicContextYoj.runWithModel(model.resultValue)
@@ -60,21 +60,6 @@ object YojComposer {
     children: List[TopicContextYoj.ComponentSpec],
     framing: Option[String] = None
   ): TopicContextYoj.ComponentSpec = {
-    // val buildChildren = buildList[TopicContextYoj.ComponentSpec](
-    //   s"${name}_parent_children",
-    //   children
-    // )
-    // Block(
-    //   s"${name}_parentComponent",
-    //   List(buildChildren) -> obj(
-    //     TopicContextYoj.ComponentSpec(
-    //       kind = "yoj",
-    //       name = Some(name),
-    //       framing = framing,
-    //       children = buildChildren.resultValue
-    //     )
-    //   )
-    // )
     TopicContextYoj.ComponentSpec(
       kind = "yoj",
       name = Some(name),
