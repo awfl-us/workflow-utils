@@ -10,9 +10,9 @@ import us.awfl.utils.Convo.SessionId
 import us.awfl.utils.KalaVibhaga
 import us.awfl.utils.Convo.StepName
 
-case class Quiz(name: Field, subject: Field, contents: Field, score: Field, comments: Field)
+case class Quiz(name: Value[String], subject: Value[String], contents: Value[String], score: Value[String], comments: Value[String])
 
-given Ista[Quiz] = Ista("quizes", buildList("buildQuizIsta", List(ChatMessage("system", str(
+given Ista[Quiz] = Ista("quizes", _ => buildList("buildQuizIsta", List(ChatMessage("system", str(
   """Return quizes given to the student. Produce the quiz, questions and answers accurately. Quizes are one of the most important elements of a class since they give a hard metric as to the student's retention and progress in a subject.
   | - name: Name the quiz to give an idea of the material covered.
   | - subject: The subject of the class this quiz was given in.
@@ -22,9 +22,9 @@ given Ista[Quiz] = Ista("quizes", buildList("buildQuizIsta", List(ChatMessage("s
   """.stripMargin
 )))))
 
-case class Essay(prompt: Field, name: Field, subject: Field, contents: Field, grade: Field, comments: Field)
+case class Essay(prompt: Value[String], name: Value[String], subject: Value[String], contents: Value[String], grade: Value[String], comments: Value[String])
 
-given Ista[Essay] = Ista("essays", buildList("buildEssayIsta", List(ChatMessage("system", str(
+given Ista[Essay] = Ista("essays", _ => buildList("buildEssayIsta", List(ChatMessage("system", str(
   """Return any essays written by the student. Include these fields:
   | - prompt: The topic, question or prompt that the student is writing off of.
   | - name: Name of the essay.
@@ -35,9 +35,9 @@ given Ista[Essay] = Ista("essays", buildList("buildEssayIsta", List(ChatMessage(
   """.stripMargin
 )))))
 
-case class Project(name: Field, subject: Field, contents: Field, grade: Field, comments: Field)
+case class Project(name: Value[String], subject: Value[String], contents: Value[String], grade: Value[String], comments: Value[String])
 
-given Ista[Project] = Ista("projects", buildList("buildProjectIsta", List(ChatMessage("system", str(
+given Ista[Project] = Ista("projects", _ => buildList("buildProjectIsta", List(ChatMessage("system", str(
   """Return any projects completed by the student. Include the following fields:
   | - name: Name of the project.
   | - subject: The subject the project is related to.
@@ -47,9 +47,9 @@ given Ista[Project] = Ista("projects", buildList("buildProjectIsta", List(ChatMe
   """.stripMargin
 )))))
 
-case class Activity(name: Field, subject: Field, contents: Field, grade: Field, comments: Field)
+case class Activity(name: Value[String], subject: Value[String], contents: Value[String], grade: Value[String], comments: Value[String])
 
-given Ista[Activity] = Ista("activities", buildList("buildActivityIsta", List(ChatMessage("system", str(
+given Ista[Activity] = Ista("activities", _ => buildList("buildActivityIsta", List(ChatMessage("system", str(
   """Return any class activities the student participated in. Include the following fields:
   | - name: Name of the activity.
   | - subject: Subject area related to the activity.
@@ -59,14 +59,14 @@ given Ista[Activity] = Ista("activities", buildList("buildActivityIsta", List(Ch
   """.stripMargin
 )))))
 
-case class Lesson(subject: Field, coveredMaterial: Field, quizes: ListValue[Quiz], essays: ListValue[Essay], projects: ListValue[Project], activities: ListValue[Activity])
+case class Lesson(subject: Value[String], coveredMaterial: Value[String], quizes: ListValue[Quiz], essays: ListValue[Essay], projects: ListValue[Project], activities: ListValue[Activity])
 
 object Lesson {
-  given Ista[Lesson] = Ista("lessons", {
-    val quizIsta = summon[Ista[Quiz]].build
-    val essayIsta = summon[Ista[Essay]].build
-    val projectIsta = summon[Ista[Project]].build
-    val activityIsta = summon[Ista[Activity]].build
+  given Ista[Lesson] = Ista("lessons", { k =>
+    val quizIsta = summon[Ista[Quiz]].build(k)
+    val essayIsta = summon[Ista[Essay]].build(k)
+    val projectIsta = summon[Ista[Project]].build(k)
+    val activityIsta = summon[Ista[Activity]].build(k)
 
     val lessonIsta = buildList("buildLessonIsta", List(ChatMessage("system", str(
       """Please pick out the incremental milestones of this on ongoing lession.

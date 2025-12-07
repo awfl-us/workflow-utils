@@ -10,11 +10,11 @@ import us.awfl.services.Firebase
 object Cache {
   def apply[T: Spec](
     name: String,
-    collection: BaseValue[String],
-    id: Field,
+    collection: Value[String],
+    id: Value[String],
     thresholdMillis: Int,
     step: Step[T, BaseValue[T]]
-  ): Step[T, BaseValue[T]] with ValueStep[T] = {
+  ): Step[T, Value[T]] = {
     import Cache._
 
     val readStep = Firebase.read[CachedValue[T]](s"${name}Read", collection, str(id.cel))
@@ -28,7 +28,7 @@ object Cache {
       id = id,
       contents = obj(CachedValueWrite(
         result = step.resultValue,
-        updatedAt = Field(nowField.value)
+        updatedAt = Value(nowField.value)
       ))
     )
 
@@ -44,17 +44,17 @@ object Cache {
         (Nil -> readBody.flatMap(_.result)),
 
       (true: Cel) ->
-        (List(Raise(s"${name}_raiseFailedCache", obj(Error(obj("Cache run failed"), obj(""))))) -> step.resultValue)
+        (List(Raise(s"${name}_raiseFailedCache", obj(Error(str("Cache run failed"), Value(500))))) -> step.resultValue)
     ))
 
     Block(name, List[Step[_, _]](readStep, conditionalRun) -> conditionalRun.resultValue)
   }
 
-  case class CachedValueWrite[T](updatedAt: Field, result: BaseValue[T])
-  case class CachedValue[T](updatedAt: Field, result: Resolved[T])
+  case class CachedValueWrite[T](updatedAt: Value[String], result: BaseValue[T])
+  case class CachedValue[T](updatedAt: Value[String], result: Resolved[T])
 
   implicit def cachedSpec[T: Spec]: Spec[CachedValue[T]] = Spec { resolver =>
-    CachedValue[T](resolver.field("updatedAt"), resolver.in("result"))
+    CachedValue[T](resolver.in("updatedAt"), resolver.in("result"))
   }
 
   // implicit val strValEncoder: Encoder[Value[String]] = Encoder.forProduct1("value")(_.get)

@@ -51,7 +51,7 @@ object Locks {
   }
 
   // Acquire the lock with TTL; return acquired=true/false, mapping 409 to false.
-  def acquireBool(stepName: String, key: Key, owner: Value[String], ttlSeconds: Int = 300): Try[Boolean, BaseValue[Boolean]] = {
+  def acquireBool(stepName: String, key: Key, owner: Value[String], ttlSeconds: Int = 300): Try[Boolean, Value[Boolean]] = {
     val acquire = Firebase.acquireLock(stepName, key.collection, key.id, owner, ttlSeconds)
     Try(
       s"${stepName}_try",

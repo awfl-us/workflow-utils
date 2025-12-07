@@ -14,19 +14,19 @@ import us.awfl.utils.YojComposer
 import us.awfl.services.Llm.ToolChoice
 
 object Convo {
-  def addMessage(name: String, message: BaseValue[ChatMessage], cost: BaseValue[Double] = Value.nil)(using ista: Ista[ChatMessage], kala: KalaVibhaga): Post[Nothing] = {
+  def addMessage(name: String, message: BaseValue[ChatMessage], cost: Value[Double] = Value.nil)(using ista: Ista[ChatMessage], kala: KalaVibhaga): Post[Nothing] = {
     ista.write(name, message, Value("sys.now()"), cost)
   }
 
-  val emptyYoj = Raise("emptyYoj", obj(Error(str("Empty Yoj returned"), str(400))))
+  val emptyYoj = Raise("emptyYoj", obj(Error(str("Empty Yoj returned"), Value(400))))
 
-  def complete[In: Yoj, Out: Spec: Ista](name: String, prompt: Prompt, yoj: ListValue[ChatMessage], model: BaseValue[String] = Field.str("gpt-5")): Step[ChatJsonResponse[Out], BaseValue[ChatJsonResponse[Out]]] = {
-    val buildIsta = summon[Ista[Out]].build
+  def complete[In: Yoj, Out: Spec: Ista](name: String, prompt: Prompt, yoj: ListValue[ChatMessage], model: Value[String] = str("gpt-5"))(using kala: KalaVibhaga): Step[ChatJsonResponse[Out], Value[ChatJsonResponse[Out]]] = {
+    val buildIsta = summon[Ista[Out]].build(kala)
     val messages = join(s"${name}_joinMessages", prompt.build.resultValue, yoj, buildIsta.resultValue)
     val chat = us.awfl.services.Llm.chatJson[Out](s"${name}_chat", messages.resultValue, model = model)
-    val switch = Switch(s"${name}_switch", List(
+    val switch = Switch(s"${name}_switch", List[(Cel, (List[Step[_, _]], BaseValue[ChatJsonResponse[Out]]))](
       (len(yoj) > 0) -> (List[Step[_, _]](buildIsta, prompt.build, messages, chat) -> chat.resultValue),
-      (true: Cel) -> (List(emptyYoj) -> Value("null"))
+      (true: Cel) -> (List(emptyYoj) -> Value.nil)
     ))
     Block(s"${name}_block", switch.fn)
   }
@@ -38,10 +38,10 @@ object Convo {
     yoj: ListValue[ChatMessage],
     tools: ListValue[Tool],
     toolChoice: BaseValue[ToolChoice] = ToolChoice.auto,
-    model: BaseValue[String] = Field.str("gpt-4o"),
+    model: Value[String] = str("gpt-4o"),
     temperature: Double = 0.8,
     maxTokens: BaseValue[Int] = Value("null")
-  ): Step[ChatToolResponse, BaseValue[ChatToolResponse]] = {
+  ): Step[ChatToolResponse, Value[ChatToolResponse]] = {
     val messages = join(s"${name}_joinMessages", prompt.build.resultValue, yoj)
     val chat = us.awfl.services.Llm.chatWithTools(
       s"${name}_chat",
@@ -54,13 +54,13 @@ object Convo {
     )
     val switch = Switch(s"${name}_switch", List(
       (len(yoj) > 0) -> (List[Step[_, _]](prompt.build, messages, chat) -> chat.resultValue),
-      (true: Cel) -> (List(emptyYoj) -> Value("null"))
+      (true: Cel) -> (List(emptyYoj) -> Value.nil)
     ))
     Block(s"${name}_block", switch.fn)
   }
 
   // Provide a session-scoped execution wrapper used by Strider and others
-  def inSession[T: Spec](name: String, sessionId: BaseValue[String])(run: => (List[Step[_, _]], BaseValue[T])): Step[T, BaseValue[T]] = {
+  def inSession[T: Spec](name: String, sessionId: Value[String])(run: => (List[Step[_, _]], Value[T])): Step[T, Value[T]] = {
     // We could add logging or guards here later; for now just wrap the provided block.
     Block(name, run)
   }

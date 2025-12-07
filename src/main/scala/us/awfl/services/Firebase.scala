@@ -13,21 +13,21 @@ object Firebase {
 
   // Include userId in request bodies so it passes through by default
   case class UpdateArgs[T](
-    collection: BaseValue[String],
+    collection: Value[String],
     id: BaseValue[_],
     contents: BaseValue[T],
-    userId: Field = Env.userId
+    userId: Value[String] = Env.userId
   )
   case class RefArgs(
-    collection: BaseValue[String],
+    collection: Value[String],
     id: Value[String],
-    userId: Field = Env.userId
+    userId: Value[String] = Env.userId
   )
 
   // Create: fails if document exists
   def create[T](
     name: String,
-    collection: BaseValue[String],
+    collection: Value[String],
     id: BaseValue[_],
     contents: BaseValue[T]
   ): Post[Nothing] = {
@@ -38,7 +38,7 @@ object Firebase {
   // Update: fails if document is missing
   def update[T](
     name: String,
-    collection: BaseValue[String],
+    collection: Value[String],
     id: BaseValue[_],
     contents: BaseValue[T]
   ): Post[Nothing] = {
@@ -49,9 +49,9 @@ object Firebase {
   // Read: returns document data + subcollections
   def read[T: Spec](
     name: String,
-    collection: BaseValue[String],
+    collection: Value[String],
     id: Value[String]
-  ): Try[PostResult[T], BaseValue[PostResult[T]]] = {
+  ): Try[PostResult[T], Value[PostResult[T]]] = {
   
     val postStep: Post[T] = {
       val body = RefArgs(collection, id)
@@ -62,7 +62,7 @@ object Firebase {
       s"${name}_tryRead",
       List(postStep) -> postStep.resultValue,
       err => Switch(s"${name}_switchRead", List(
-        (err.get.code.cel === 404) -> (List(Log(s"${name}_log404", obj("404 - File not found"))) -> postStep.resultValue),
+        (err.get.code.cel === 404) -> (List(Log(s"${name}_log404", str("404 - File not found"))) -> postStep.resultValue),
         (true: Cel) -> (List(Raise(s"${name}_rethrow", err)) -> postStep.resultValue)
       )).fn
     )
@@ -79,37 +79,37 @@ object Firebase {
   }
 
   case class ListArgs(
-    collection: BaseValue[String],
+    collection: Value[String],
     at: BaseValue[Double],
     before: Option[Int],
     after: Option[Int],
-    userId: Field = Env.userId
+    userId: Value[String] = Env.userId
   )
   case class ListBetweenArgs(
-    collection: BaseValue[String],
+    collection: Value[String],
     start: BaseValue[Double],
     end: BaseValue[Double],
-    userId: Field = Env.userId
+    userId: Value[String] = Env.userId
   )
-  case class ListItem[T](id: Field, data: BaseValue[T])
+  case class ListItem[T](id: Value[String], data: BaseValue[T])
   case class ListResult[T](documents: ListValue[ListItem[T]])
 
   def listAt[T: Spec](
     name: String,
-    collection: BaseValue[String],
+    collection: Value[String],
     at: BaseValue[Double],
     before: Option[Int],
     after: Option[Int]
-  ): Step[ListResult[T], BaseValue[ListResult[T]]] with ValueStep[ListResult[T]] = {
+  ): Step[ListResult[T], Value[ListResult[T]]] = {
     post[ListArgs, ListResult[T]](name, "firebase/listAt", obj(ListArgs(collection, at, before, after)), Auth()).flatMap(_.body)
   }
 
   def list[T: Spec](
     name: String,
-    collection: BaseValue[String],
+    collection: Value[String],
     start: BaseValue[Double],
     end: BaseValue[Double]
-  ): Step[ListResult[T], BaseValue[ListResult[T]]] with ValueStep[ListResult[T]] = {
+  ): Step[ListResult[T], Value[ListResult[T]]]= {
     post[ListBetweenArgs, ListResult[T]](name, "firebase/list", obj(ListBetweenArgs(collection, start, end)), Auth()).flatMap(_.body)
   }
 
@@ -117,20 +117,20 @@ object Firebase {
   // NEW: segmentsForSession helper – fetch populated SegKala windows only
   // ---------------------------------------------------------------------------
   case class SegmentsArgs(
-    collection: BaseValue[String],
+    collection: Value[String],
     windowSeconds: Value[Double],
     overlapSeconds: Value[Int],
-    userId: Field = Env.userId
+    userId: Value[String] = Env.userId
   )
-  case class Segment(end: BaseValue[Double], windowSeconds: BaseValue[Double])
+  case class Segment(end: Value[Double], windowSeconds: Value[Double])
   case class SegmentsResult(segments: ListValue[Segment])
 
   def segmentsForSession(
     name: String,
-    collection: BaseValue[String],
+    collection: Value[String],
     windowSeconds: Value[Double] = Value(1200),
     overlapSeconds: Value[Int] = Value(240)
-  ): Step[SegmentsResult, BaseValue[SegmentsResult]] with ValueStep[SegmentsResult] = {
+  ): Step[SegmentsResult, Value[SegmentsResult]] = {
     post[SegmentsArgs, SegmentsResult](
       name,
       "firebase/segmentsForSession",
@@ -143,34 +143,34 @@ object Firebase {
   // NEW: lock acquire/release with TTL
   // ---------------------------------------------------------------------------
   case class LockAcquireArgs(
-    collection: BaseValue[String],
+    collection: Value[String],
     id: Value[String],
     ttlSeconds: Int,
     owner: Value[String],
-    userId: Field = Env.userId
+    userId: Value[String] = Env.userId
   )
-  case class LockResult(acquired: BaseValue[Boolean], owner: Value[String], created: BaseValue[Double])
+  case class LockResult(acquired: Value[Boolean], owner: Value[String], created: Value[Double])
   case class LockReleaseArgs(
-    collection: BaseValue[String],
+    collection: Value[String],
     id: Value[String],
     owner: Value[String],
-    userId: Field = Env.userId
+    userId: Value[String] = Env.userId
   )
 
   def acquireLock(
     name: String,
-    collection: BaseValue[String],
+    collection: Value[String],
     id: Value[String],
     owner: Value[String],
     ttlSeconds: Int = 300
-  ): Step[LockResult, BaseValue[LockResult]] with ValueStep[LockResult] = {
+  ): Step[LockResult, Value[LockResult]] = {
     val body = LockAcquireArgs(collection, id, ttlSeconds, owner)
     post[LockAcquireArgs, LockResult](name, "firebase/locks/acquire", obj(body), Auth()).flatMap(_.body)
   }
 
   def releaseLock(
     name: String,
-    collection: BaseValue[String],
+    collection: Value[String],
     id: Value[String],
     owner: Value[String]
   ): Post[NoValueT] = {

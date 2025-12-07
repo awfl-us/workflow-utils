@@ -38,7 +38,7 @@ object YojComposer {
           components = components.resultValue,
           filters = filters
         )
-      ).base
+      )
     )
 
     val call = TopicContextYoj.runWithModel(model.resultValue)

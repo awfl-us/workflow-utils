@@ -9,15 +9,15 @@ import us.awfl.utils.KalaVibhaga
 import us.awfl.utils.Convo.StepName
 
 // Schema for collapsed context groups
-case class CollapsedItem(`type`: Field, id: Field)
-case class CollapsedGroup(name: Field, description: Field, items: ListValue[CollapsedItem])
+case class CollapsedItem(`type`: Value[String], id: Value[String])
+case class CollapsedGroup(name: Value[String], description: Value[String], items: ListValue[CollapsedItem])
 case class CollapseResponse(groups: ListValue[CollapsedGroup])
 
 object CollapseResponse {
   // Ista prompt for generating collapsed groups from context
   given Ista[CollapseResponse] = Ista(
     "collapsed",
-    buildList(
+    _ => buildList(
       "buildCollapseIsta",
       List(
         ChatMessage(

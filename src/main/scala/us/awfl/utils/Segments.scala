@@ -23,7 +23,7 @@ object Segments {
       overlapSecs:   Value[Int] = Value(DefaultOverlapSeconds)
   ): Step[SegKala, ListValue[SegKala]] = {
     // Source collection of raw chat messages for this session
-    val messagesCollection: BaseValue[String] =
+    val messagesCollection: Value[String] =
       summon[Ista[ChatMessage]].convoCollection(sessionId)
 
     // Fetch segment boundaries

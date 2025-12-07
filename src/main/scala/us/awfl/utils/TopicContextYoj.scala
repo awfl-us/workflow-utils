@@ -55,7 +55,7 @@ object TopicContextYoj {
 
   case class TopicArgs(
     kala: BaseValue[Ctx.Kala],
-    presetId: BaseValue[String] = Value("null"),
+    presetId: Value[String] = Value("null"),
     includeDocId: BaseValue[Boolean] = Value(true),
     model: BaseValue[Model] = Value("null")
   )

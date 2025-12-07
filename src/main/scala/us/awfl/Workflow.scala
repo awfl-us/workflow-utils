@@ -11,10 +11,8 @@ trait Workflow {
   type Input
   type Result
 
-  val inputVal: BaseValue[Input]
+  val inputVal: Value[Input]
   lazy val input = inputVal.get
-
-  // lazy val sessionId = Value[String](CelFunc("map.get", inputVal.cel, "sessionId"))
 
   def workflows: List[DslWorkflow[_]] = List()
 
@@ -30,7 +28,7 @@ trait Workflow {
   ): (List[Step[_, _]], BaseValue[T]) = {
     // Resolve execution IDs
     val triggeredExecId: Value[String] = Exec.currentExecId
-    val callingExecId: BaseValue[String] = Env.callingWorkflowExec.getOrElse(Value.nil)
+    val callingExecId: Value[String] = Env.callingWorkflowExec.getOrElse(Value.nil)
 
     // 1) Register this execution under the session (idempotent create -> update on 409)
     val registerExecForSession = Exec.registerExecForSession(

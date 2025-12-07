@@ -8,8 +8,8 @@ import io.circe.generic.auto._
 
 object GoogleStorage {
 
-  case class ReadFileArgs(bucket: Field, `object`: Field, alt: BaseValue[String] = str("media"))
-  case class FileContent(content: Field)
+  case class ReadFileArgs(bucket: Value[String], `object`: Value[String], alt: Value[String] = str("media"))
+  case class FileContent(content: Value[String])
 
   /**
    * Reads the content of a file from a Google Cloud Storage bucket.
@@ -17,7 +17,7 @@ object GoogleStorage {
    * @param bucket Bucket name.
    * @param object Path to object within the bucket.
    */
-  def readFile(name: String, bucket: Field, `object`: Field): Call[ReadFileArgs, FileContent] = {
+  def readFile(name: String, bucket: Value[String], `object`: Value[String]): Call[ReadFileArgs, FileContent] = {
     val args = ReadFileArgs(bucket, `object`)
     Call(name, "googleapis.storage.v1.objects.get", obj(args))
   }

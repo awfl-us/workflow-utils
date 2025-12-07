@@ -8,7 +8,7 @@ import us.awfl.utils.Events
 object Exec {
   // Payload for linking executions
   case class ExecLink(
-    callingExec: BaseValue[String],
+    callingExec: Value[String],
     triggeredExec: Value[String],
     sessionId: Value[String],
     created: BaseValue[Double]
@@ -24,11 +24,11 @@ object Exec {
   // Status update payload (shared across callers)
   case class StatusUpdate(
     execId: Value[String],
-    status: BaseValue[String],
+    status: Value[String],
     ended: BaseValue[Boolean],
-    workflow: BaseValue[String] = WORKFLOW_ID,
+    workflow: Value[String] = WORKFLOW_ID,
     updated: BaseValue[Double] = Value("sys.now()"),
-    error: BaseValue[String] = Value.nil
+    error: Value[String] = Value.nil
   )
 
   // Default collection names
@@ -42,7 +42,7 @@ object Exec {
   // Returns a Step that yields "ok" | "skip" | "fail"
   def registerExecLink(
     name: String,
-    callingExecId: BaseValue[String],
+    callingExecId: Value[String],
     triggeredExecId: Value[String],
     collection: Value[String] = linksCollection
   ) = {
@@ -125,10 +125,10 @@ object Exec {
   def updateExecStatus(
     name: String,
     execId: Value[String],
-    status: BaseValue[String],
+    status: Value[String],
     ended: BaseValue[Boolean],
-    error: BaseValue[String] = Value.nil,
-    workflow: BaseValue[String] = WORKFLOW_ID
+    error: Value[String] = Value.nil,
+    workflow: Value[String] = WORKFLOW_ID
   ) = {
     us.awfl.utils.post[StatusUpdate, NoValueT](
       name,
@@ -140,8 +140,8 @@ object Exec {
   // Enqueue a status update notification to Pub/Sub for out-of-band consumers
   def enqueueExecStatus(
     name: String,
-    status: BaseValue[String],
-    error: BaseValue[String] = Value.nil
+    status: Value[String],
+    error: Value[String] = Value.nil
   ) = {
     Events.enqueueResponse(
       s"${name}",

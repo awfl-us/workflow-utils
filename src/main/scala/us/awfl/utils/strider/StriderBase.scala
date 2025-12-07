@@ -35,17 +35,17 @@ trait Strider[In, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[Out], pro
 
   val yojWorkflowName = s"${Yoj.kalaName}-Yoj"
 
-  protected def postWriteSteps(sessionId: Value[String], responseId: BaseValue[String], response: BaseValue[Out], at: BaseValue[Double]): List[Step[_, _]] = List()
+  protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]): List[Step[_, _]] = List()
 
   val strideStep = Convo.inSession[Out]("inSession", Env.sessionId) {
     val key = Locks.key(ista.name)
     val owner: Value[String] = Value("uuid.generate()")
     val acquired = Locks.acquireBool("lock_acquire", key, owner, 300)
 
-    val messagesInWindow = Try("messagesInWindow", summon[Yoj[ChatMessage]].build(using StriderObj.segmentKala).fn)
+    val messagesInWindow = summon[Yoj[ChatMessage]].build(using StriderObj.segmentKala)
     val check            = ista.read[Out]
 
-    val shouldWrite: BaseValue[Boolean] = Value((len(messagesInWindow.resultValue) > 0) && (
+    val shouldWrite: Value[Boolean] = Value((len(messagesInWindow.resultValue) > 0) && (
       ((len(check.resultValue) === 0) || (check.resultValue(len(check.resultValue) - 1).flatMap(_.create_time).cel < StriderObj.segmentKala.end))
     ))
 
@@ -57,7 +57,7 @@ trait Strider[In, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[Out], pro
     )
 
     val doWriteSeg: Step[Out, BaseValue[Out]] = {
-      val newId        = Try[String, Value[String]]("ista_write_newId", List() -> Value("uuid.generate()"))
+      val newId        = Try("ista_write_newId", List() -> Value[String]("uuid.generate()"))
       val payload      = obj(us.awfl.utils.Timestamped(complete.result.result, StriderObj.segmentKala.end, complete.result.total_cost))
       val createChild  = create("ista_write_create_child", ista.convoCollection(Env.sessionId), newId.resultValue, payload)
       val updateParent = update(
@@ -99,7 +99,7 @@ trait Strider[In, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[Out], pro
     val runIfAcquired = Switch("lock_switch", List(
       (acquired.resultValue === Value(true)) -> {
         val workBlock = Block("work_block", List[Step[_, _]](messagesInWindow, check, workSwitch) -> workSwitch.resultValue)
-        List(workBlock, release) -> workBlock.resultValue
+        List[Step[_, _]](workBlock, release) -> workBlock.resultValue
       },
       (true: Cel) -> (List() -> Value("null"))
     ))

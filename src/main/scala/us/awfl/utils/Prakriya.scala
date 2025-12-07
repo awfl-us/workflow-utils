@@ -92,7 +92,7 @@ object Yoj:
               components = components.resultValue,
               filters = ListValue.empty[TopicContextYoj.FilterSpec]
             )
-          ).base
+          )
         )
 
         val call = TopicContextYoj.runWithModel(model.resultValue)
@@ -123,10 +123,10 @@ object Yoj:
 // इष्टः — यः अभिलषितः अर्थः। 
 // प्रयोजनदृष्ट्या अपेक्षितः परिणामः। 
 // उदाहरणतः, यं विषयं प्राप्तुं वाञ्छति प्रणेता, स इष्टः।
-case class Ista[T: Spec](name: String, build: Step[ChatMessage, ListValue[ChatMessage]]) {
+case class Ista[T: Spec](name: String, build: KalaVibhaga => Step[ChatMessage, ListValue[ChatMessage]]) {
   def convoCollection(sessionId: Value[String]) = str(("convo.sessions/": Cel) + sessionId.cel + "/" + name)
 
-  def write(stepName: String, contents: BaseValue[T], at: BaseValue[Double], cost: BaseValue[Double])(using kala: KalaVibhaga): Post[Nothing] = {
+  def write(stepName: String, contents: BaseValue[T], at: Value[Double], cost: Value[Double])(using kala: KalaVibhaga): Post[Nothing] = {
     val ts = obj(Timestamped(contents, at, cost))
     val writeStep: Post[Nothing] = kala match {
       case SegKala(sessionId, end, windowSeconds) =>
@@ -149,17 +149,17 @@ case class Ista[T: Spec](name: String, build: Step[ChatMessage, ListValue[ChatMe
     }
     contents match {
       case Obj(value)      => writeStep
-      case _: Resolved[?] =>
+      case r: Resolved[?] =>
         Switch(s"${stepName}_switch", List(
-          (contents.cel !== Value("null")) -> writeStep.fn,
-          (true: Cel) -> (List() -> Value("null"))
+          (r.cel !== Value.nil) -> writeStep.fn,
+          (true: Cel) -> (List() -> Value.nil)
         ))
     }
   }
 
   def read[T: Spec](using kala: KalaVibhaga): Step[Timestamped[T], ListValue[Timestamped[T]]] = {
     val log = kala.log(s"read_${name}Ista_logKala")
-    val results: ValueStep[ListResult[Timestamped[T]]] = kala match {
+    val results: Step[ListResult[Timestamped[T]], Value[ListResult[Timestamped[T]]]] = kala match {
       case SegKala(sessionId, end, windowSeconds) => list(s"read_${name}Ista_convoSegKala", convoCollection(sessionId), Value(end.cel - windowSeconds.cel), end)
       case SessionKala(sessionId, sessionEnd)      => list(s"read_${name}Ista_SessionKala", str(("log.sessions.": Cel) + name), Value(0), sessionEnd)
       case WeekKala(weekEnd)                       => list(s"read_${name}Ista_WeekKala", str(("log.weekly.": Cel) + name), Value(weekEnd.cel - 60 * 60 * 24 * 7), weekEnd)
@@ -178,12 +178,12 @@ case class Ista[T: Spec](name: String, build: Step[ChatMessage, ListValue[ChatMe
 // संवादी प्रक्रमायाः कालपरिमाणनुसारं विभागः। 
 // उदाहरणतः, खण्डः (Segment), सत्यम् (Session), त्रिमासिकम् (Quarter) इत्यादयः।
 sealed trait KalaVibhaga {
-  def collection(name: String): BaseValue[String]
+  def collection(name: String): Value[String]
   def *(times: Int): KalaVibhaga
   def log(name: String): Log
-  val end: BaseValue[Double]
+  val end: Value[Double]
 
-  def segment(using sessionId: SessionId): SegKala = SegKala(sessionId.value, end, Value(obj(60 * 20)))
+  def segment(using sessionId: SessionId): SegKala = SegKala(sessionId.value, end, Value(60 * 20))
   def week: WeekKala = {
     val original = 259200: Cel
     val weekSeconds: Cel = 7 * 24 * 60 * 60
@@ -198,31 +198,31 @@ sealed trait KalaVibhaga {
   }
 }
 
-case class SegKala(sessionId: Value[String], end: BaseValue[Double], windowSeconds: BaseValue[Double]) extends KalaVibhaga {
-  override def collection(name: String): BaseValue[String] = str(("convo.sessions/": Cel) + sessionId.cel + "/" + name)
+case class SegKala(sessionId: Value[String], end: Value[Double], windowSeconds: Value[Double]) extends KalaVibhaga {
+  override def collection(name: String): Value[String] = str(("convo.sessions/": Cel) + sessionId.cel + "/" + name)
   override def *(times: Int): KalaVibhaga = SegKala(sessionId, end, Value(windowSeconds.cel * times))
   override def log(name: String): Log = Log(name, str(("SegKala: ": Cel) + CelFunc("time.format", end.cel, "America/New_York")))
 
   def session: SessionKala = SessionKala(sessionId, end)
 }
 
-case class SessionKala(sessionId: Value[String], sessionEnd: BaseValue[Double]) extends KalaVibhaga {
-  override def collection(name: String): BaseValue[String] = str(("convo.sessions/": Cel) + sessionId.cel + "/" + name)
+case class SessionKala(sessionId: Value[String], sessionEnd: Value[Double]) extends KalaVibhaga {
+  override def collection(name: String): Value[String] = str(("convo.sessions/": Cel) + sessionId.cel + "/" + name)
   override def *(times: Int): KalaVibhaga = this
   override def log(name: String): Log = Log(name, str(("SessionKala: ": Cel) + CelFunc("time.format", sessionEnd.cel, "America/New_York")))
-  override val end: BaseValue[Double] = sessionEnd
+  override val end: Value[Double] = sessionEnd
 }
 
-case class WeekKala(weekEnd: BaseValue[Double]) extends KalaVibhaga {
-  override def collection(name: String): BaseValue[String] = str(("log.sessions.": Cel) + name)
+case class WeekKala(weekEnd: Value[Double]) extends KalaVibhaga {
+  override def collection(name: String): Value[String] = str(("log.sessions.": Cel) + name)
   override def *(times: Int): KalaVibhaga = TermKala(Value(weekEnd.cel - 60 * 60 * 24 * 7 * times), weekEnd)
   override def log(name: String): Log = Log(name, str(("WeekKala: ": Cel) + CelFunc("time.format", weekEnd.cel, "America/New_York")))
-  override val end: BaseValue[Double] = weekEnd
+  override val end: Value[Double] = weekEnd
 }
 
-case class TermKala(termBegin: BaseValue[Double], termEnd: BaseValue[Double]) extends KalaVibhaga {
-  override def collection(name: String): BaseValue[String] = str(("log.weekly.": Cel) + name)
+case class TermKala(termBegin: Value[Double], termEnd: Value[Double]) extends KalaVibhaga {
+  override def collection(name: String): Value[String] = str(("log.weekly.": Cel) + name)
   override def *(times: Int): KalaVibhaga = TermKala(Value(termEnd.cel - ((termEnd.cel - termBegin.cel) * times)), termEnd)
   override def log(name: String): Log = Log(name, str(("TermKala: ": Cel) + CelFunc("time.format", termEnd.cel, "America/New_York")))
-  override val end: BaseValue[Double] = termEnd
+  override val end: Value[Double] = termEnd
 }

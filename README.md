@@ -102,7 +102,7 @@ LLM chat to JSON
 ```scala
 import us.awfl.services.Llm
 
-case class Person(name: Field, age: Field)
+case class Person(name: Value[String], age: Value[String])
 // Provide/derive an implicit Spec[Person] as required by the DSL in your codebase
 val msgs = buildList("msgs", List(ChatMessage("user", str("Return a JSON person"))))
 val toJson = Llm.chatJson[Person](
