@@ -11,10 +11,15 @@ object Llm {
   case class Reply(reply: String)
 
   // Tool definitions
-  case class ToolDefProperty(`type`: String, `enum`: ListValue[String] = ListValue.empty)
-  case class ToolDefParams(`type`: String, properties: Map[String, ToolDefProperty], required: Value[String])
-  case class ToolFunctionDef(name: Value[String], description: String, parameters: ToolDefParams)
-  case class Tool(`type`: String = "function", function: ToolFunctionDef)
+  case class ToolDefProperty(
+    `type`: String,
+    properties: Map[String, ToolDefProperty] = Map.empty,
+    `enum`: OptList[String] = OptList.nil,
+    required: OptList[String] = OptList.nil
+  )
+  
+  case class ToolFunctionDef(name: Value[String], description: Value[String], parameters: BaseValue[ToolDefProperty])
+  case class Tool(`type`: Value[String] = str("function"), function: BaseValue[ToolFunctionDef])
 
   sealed trait ToolChoice
   object ToolChoice {

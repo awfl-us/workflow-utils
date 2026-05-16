@@ -6,7 +6,7 @@ import io.circe.generic.auto._
 import io.circe.Encoder
 
 // Use plural jobs prefix for all HTTP calls and OIDC audience
-case class Auth(`type`: String = "OIDC", audience: Value[String] = Env.BASE_URL)
+case class Auth(`type`: Value[String] = str("OIDC"), audience: Value[String] = Env.BASE_URL)
 
 type Post[Out] = Step[PostResult[Out], Value[PostResult[Out]]]
 

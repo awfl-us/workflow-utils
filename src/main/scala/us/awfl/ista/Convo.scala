@@ -34,7 +34,7 @@ case class ToolCallFunction(name: Value[String], arguments: Value[String]) {
     name
   ))
 }
-case class ToolCall(id: Value[String], `type`: String, function: BaseValue[ToolCallFunction])
+case class ToolCall(id: Value[String], `type`: Value[String], function: BaseValue[ToolCallFunction])
 
 case class ChatMessage(
   role: Value[String],
