@@ -13,7 +13,7 @@ import us.awfl.utils.Segments
 import us.awfl.utils.Chainable
 import us.awfl.utils.Env
 
-trait ConvoStrider[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out], prompt: Convo.Prompt)
+trait ConvoStrider[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out])
     extends Strider[In, Out] with Chainable {
   override def kala: KalaVibhaga = StriderObj.segmentKala
 
@@ -36,17 +36,17 @@ trait ConvoStrider[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out]
   }
 }
 
-trait SessionStrider[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out], prompt: Convo.Prompt)
+trait SessionStrider[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out])
     extends Strider[In, Out] {
   override def kala: KalaVibhaga = StriderObj.segmentKala.session
 }
 
-trait WeekStrider[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out], prompt: Convo.Prompt)
+trait WeekStrider[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out])
     extends Strider[In, Out] {
   override def kala: KalaVibhaga = StriderObj.segmentKala.week
 }
 
-trait TermStrider[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out], prompt: Convo.Prompt)
+trait TermStrider[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out])
     extends Strider[In, Out] {
   override def kala: KalaVibhaga = StriderObj.segmentKala.term
 }

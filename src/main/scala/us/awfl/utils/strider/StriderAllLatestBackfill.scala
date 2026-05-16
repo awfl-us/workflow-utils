@@ -13,7 +13,7 @@ import us.awfl.utils.Chainable
 /**
  * Aggregation and orchestration traits: All, Latest, Backfill.
  */
-trait All[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out], prompt: Convo.Prompt) extends us.awfl.core.Workflow {
+trait All[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out]) extends us.awfl.core.Workflow {
   import StriderObj.*
 
   override type Input = StriderInput
@@ -22,6 +22,8 @@ trait All[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out], prompt:
   override val inputVal: Value[StriderInput] = StriderObj.inputVal
 
   def name: String
+
+  def prompt: String
 
   protected def childPostWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]): List[Step[_, _]] = List()
 
@@ -56,17 +58,17 @@ trait All[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out], prompt:
     )
   }
 
-  private lazy val convo   = new ConvoStrider[In, Out]   { override val name = name; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
-  private lazy val session = new SessionStrider[In, Out] { override val name = name; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
-  private lazy val week    = new WeekStrider[In, Out]    { override val name = name; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
-  private lazy val term    = new TermStrider[In, Out]    { override val name = name; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
+  private lazy val convo   = new ConvoStrider[In, Out]   { override val name = name; override val prompt = prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
+  private lazy val session = new SessionStrider[In, Out] { override val name = name; override val prompt = prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
+  private lazy val week    = new WeekStrider[In, Out]    { override val name = name; override val prompt = prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
+  private lazy val term    = new TermStrider[In, Out]    { override val name = name; override val prompt = prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
 
   private def convoWf: List[Workflow[_]]   = convo.workflows.map(_.copy(name   = Some("Convo")))
   private def sessionWf: List[Workflow[_]] = session.workflows.map(_.copy(name = Some("Session")))
   private def weekWf: List[Workflow[_]]    = week.workflows.map(_.copy(name    = Some("Week")))
   private def termWf: List[Workflow[_]]    = term.workflows.map(_.copy(name    = Some("Term")))
 
-  private def backfillWf: Workflow[Out]      = new Backfill[In, Out](name) {
+  private def backfillWf: Workflow[Out]      = new Backfill[In, Out](name, prompt) {
     override protected def childPostWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = All.this.childPostWriteSteps(sessionId, responseId, response, at)
   }.workflow
 
@@ -76,13 +78,14 @@ trait All[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out], prompt:
 
 trait Latest[In, Out](val nameStr: String, windowSeconds: Int = us.awfl.utils.Segments.DefaultWindowSeconds, overlapSeconds: Int = us.awfl.utils.Segments.DefaultOverlapSeconds)(using spec: Spec[Out],
                                        yoj:      Yoj[In],
-                                       ista:     Ista[Out],
-                                       prompt:   Convo.Prompt)
+                                       ista:     Ista[Out])
     extends All[In, Out] with Chainable {
 
   import StriderObj.*
 
   override def name: String = nameStr
+
+  def prompt: String
 
   protected def onPostWrite(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]): List[Step[_, _]] = List()
 
@@ -134,10 +137,9 @@ trait Latest[In, Out](val nameStr: String, windowSeconds: Int = us.awfl.utils.Se
   }
 }
 
-trait Backfill[In, Out](val nameStr: String)(using spec: Spec[Out],
+trait Backfill[In, Out](val nameStr: String, val prompt: String)(using spec: Spec[Out],
                                           yoj:      Yoj[In],
-                                          ista:     Ista[Out],
-                                          prompt:   Convo.Prompt)
+                                          ista:     Ista[Out])
     extends All[In, Out] {
 
   import StriderObj.*

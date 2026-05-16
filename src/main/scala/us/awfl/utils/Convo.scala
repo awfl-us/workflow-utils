@@ -20,12 +20,12 @@ object Convo {
 
   val emptyYoj = Raise("emptyYoj", obj(Error(str("Empty Yoj returned"), Value(400))))
 
-  def complete[In: Yoj, Out: Spec: Ista](name: String, prompt: Prompt, yoj: ListValue[ChatMessage], model: Value[String] = str("gpt-5"))(using kala: KalaVibhaga): Step[ChatJsonResponse[Out], Value[ChatJsonResponse[Out]]] = {
+  def complete[In: Yoj, Out: Spec: Ista](name: String, prompt: ListValue[ChatMessage], yoj: ListValue[ChatMessage], model: Value[String] = str("gpt-5"))(using kala: KalaVibhaga): Step[ChatJsonResponse[Out], Value[ChatJsonResponse[Out]]] = {
     val buildIsta = summon[Ista[Out]].build(kala)
-    val messages = join(s"${name}_joinMessages", prompt.build.resultValue, yoj, buildIsta.resultValue)
+    val messages = join(s"${name}_joinMessages", prompt, yoj, buildIsta.resultValue)
     val chat = us.awfl.services.Llm.chatJson[Out](s"${name}_chat", messages.resultValue, model = model)
     val switch = Switch(s"${name}_switch", List[(Cel, (List[Step[_, _]], BaseValue[ChatJsonResponse[Out]]))](
-      (len(yoj) > 0) -> (List[Step[_, _]](buildIsta, prompt.build, messages, chat) -> chat.resultValue),
+      (len(yoj) > 0) -> (List[Step[_, _]](buildIsta, messages, chat) -> chat.resultValue),
       (true: Cel) -> (List(emptyYoj) -> Value.nil)
     ))
     Block(s"${name}_block", switch.fn)
@@ -34,7 +34,7 @@ object Convo {
   // Tool-enabled completion that surfaces tool_calls for external dispatch
   def completeWithTools(
     name: String,
-    prompt: Prompt,
+    prompt: ListValue[ChatMessage],
     yoj: ListValue[ChatMessage],
     tools: ListValue[Tool],
     toolChoice: BaseValue[ToolChoice] = ToolChoice.auto,
@@ -42,7 +42,7 @@ object Convo {
     temperature: Double = 0.8,
     maxTokens: BaseValue[Int] = Value("null")
   ): Step[ChatToolResponse, Value[ChatToolResponse]] = {
-    val messages = join(s"${name}_joinMessages", prompt.build.resultValue, yoj)
+    val messages = join(s"${name}_joinMessages", prompt, yoj)
     val chat = us.awfl.services.Llm.chatWithTools(
       s"${name}_chat",
       messages.resultValue,
@@ -53,7 +53,7 @@ object Convo {
       maxTokens = maxTokens
     )
     val switch = Switch(s"${name}_switch", List(
-      (len(yoj) > 0) -> (List[Step[_, _]](prompt.build, messages, chat) -> chat.resultValue),
+      (len(yoj) > 0) -> (List[Step[_, _]](messages, chat) -> chat.resultValue),
       (true: Cel) -> (List(emptyYoj) -> Value.nil)
     ))
     Block(s"${name}_block", switch.fn)
@@ -76,8 +76,6 @@ object Convo {
     def apply(name: String): StepName = name
   extension(name: StepName)
     def value: String = name
-
-  case class Prompt(build: Step[ChatMessage, ListValue[ChatMessage]])
 
   // ConvoContext is now a concrete case class to enable schema derivation.
   // The Yoj below still composes the summarized/tail components, but the data type is concrete.
