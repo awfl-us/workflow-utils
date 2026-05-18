@@ -15,8 +15,11 @@ object Llm {
     `type`: String,
     properties: Map[String, ToolDefProperty] = Map.empty,
     `enum`: OptList[String] = OptList.nil,
-    required: OptList[String] = OptList.nil
-  )
+    required: OptList[String] = OptList.nil,
+    items: Option[Map[String, ?]] = None
+  ) {
+    def toMap: Map[String, ?] = Map("type" -> `type`, "properties" -> properties, "enum" -> `enum`, "required" -> required, "items" -> items)
+  }
   
   case class ToolFunctionDef(name: Value[String], description: Value[String], parameters: BaseValue[ToolDefProperty])
   case class Tool(`type`: Value[String] = str("function"), function: BaseValue[ToolFunctionDef])
