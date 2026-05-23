@@ -56,9 +56,4 @@ object Cache {
   implicit def cachedSpec[T: Spec]: Spec[CachedValue[T]] = Spec { resolver =>
     CachedValue[T](resolver.in("updatedAt"), resolver.in("result"))
   }
-
-  // implicit val strValEncoder: Encoder[Value[String]] = Encoder.forProduct1("value")(_.get)
-
-  // implicit def encoder[T](using enc: Encoder[T]): Encoder[CachedValue[T]] =
-  //   deriveEncoder
 }

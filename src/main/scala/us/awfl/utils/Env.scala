@@ -11,7 +11,8 @@ case class Env(
   BASE_URL: Value[String] = Env.BASE_URL,
   background: OptValue[Boolean] = Env.background,
   projectId: Value[String] = Env.projectId,
-  sessionId: Value[String] = Env.sessionId
+  sessionId: Value[String] = Env.sessionId,
+  workbranch: OptValue[Boolean] = Env.workbranch
 )
 val ENV: BaseValue[Env] = obj(Env())
 object Env {

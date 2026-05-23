@@ -92,7 +92,7 @@ trait Strider[In, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[Out]) ext
     val workSwitch = Switch(
       "ista_write_switch",
       List(
-        (shouldWrite.cel === Value(true)) -> (List[Step[_, _]](buildPrompt, buildYoj, complete, doWrite) -> doWrite.resultValue),
+        shouldWrite.cel -> (List[Step[_, _]](buildPrompt, buildYoj, complete, doWrite) -> doWrite.resultValue),
         (true: Cel) -> (List(Log("write_skipped", str("Summary already exists or no messages. Skipping write."))) -> Value("null"))
       )
     )

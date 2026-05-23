@@ -52,21 +52,6 @@ object Yoj:
     component(name).copy(framing = Some(framing))
 
   // Optional prefixed form for convenience: "yoj:NAME", "ista:NAME", "literal:VALUE"
-  def componentFrom(spec: String, framing: Option[String] = None): TopicContextYoj.ComponentSpec = {
-    val s = spec.trim
-    val (kind, rest) =
-      if s.startsWith("yoj:") then ("yoj", s.drop(4))
-      else if s.startsWith("yoj/") then ("yoj", s.drop(4))
-      else if s.startsWith("ista:") then ("ista", s.drop(5))
-      else if s.startsWith("ista/") then ("ista", s.drop(5))
-      else if s.startsWith("literal:") then ("literal", s.drop(8))
-      else ("yoj", s)
-
-    kind match
-      case "literal" => TopicContextYoj.ComponentSpec(kind = "literal", value = Some(rest))
-      case "ista"    => TopicContextYoj.ComponentSpec(kind = "ista", name = Some(rest), framing = framing)
-      case _          => TopicContextYoj.ComponentSpec(kind = "yoj", name = Some(rest), framing = framing)
-  }
 
   // Build a Yoj that contributes a single component (and a default messages builder)
   // The messages builder renders this single component via TopicContextYoj
@@ -105,20 +90,6 @@ object Yoj:
       },
       component(name, framing)
     )
-
-  // Convenience: supply a framing + custom build function
-  // def withFraming[T](
-  //   name: String,
-  //   framing: String
-  // )(build: KalaVibhaga => Step[ChatMessage, ListValue[ChatMessage]]): Yoj[T] =
-  //   new Yoj[T](name, build, component(name, framing))
-
-  // Convenience: supply only a custom build function; component defaults to kind="yoj" with the given name
-  // def apply[T](
-  //   name: String,
-  //   build: KalaVibhaga => Step[ChatMessage, ListValue[ChatMessage]]
-  // ): Yoj[T] =
-  //   new Yoj[T](name, build, component(name))
 
 // इष्टः — यः अभिलषितः अर्थः। 
 // प्रयोजनदृष्ट्या अपेक्षितः परिणामः। 
