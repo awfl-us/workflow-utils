@@ -16,6 +16,7 @@ object Events {
     cost: BaseValue[Double],
     background: BaseValue[Boolean] = Env.background.getOrElse(Value(false)),
     workdir: Value[String] = Value.nil,
+    timeout_seconds: Value[Int] = Value(60),
     // Optional status update fields (backward-compatible defaults)
     status: Value[String] = str(""),
     error: Value[String] = Value.nil
