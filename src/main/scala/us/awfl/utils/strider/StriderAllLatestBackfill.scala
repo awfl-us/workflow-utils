@@ -13,7 +13,7 @@ import us.awfl.utils.Chainable
 /**
  * Aggregation and orchestration traits: All, Latest, Backfill.
  */
-trait All[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out]) extends us.awfl.core.Workflow {
+trait All[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out]) extends us.awfl.core.Workflow { self =>
   import StriderObj.*
 
   override type Input = StriderInput
@@ -58,10 +58,10 @@ trait All[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out]) extends
     )
   }
 
-  private lazy val convo   = new ConvoStrider[In, Out]   { override val name = name; override val prompt = prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
-  private lazy val session = new SessionStrider[In, Out] { override val name = name; override val prompt = prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
-  private lazy val week    = new WeekStrider[In, Out]    { override val name = name; override val prompt = prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
-  private lazy val term    = new TermStrider[In, Out]    { override val name = name; override val prompt = prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
+  private lazy val convo   = new ConvoStrider[In, Out]   { override val name = name; override def prompt = self.prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
+  private lazy val session = new SessionStrider[In, Out] { override val name = name; override def prompt = self.prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
+  private lazy val week    = new WeekStrider[In, Out]    { override val name = name; override def prompt = self.prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
+  private lazy val term    = new TermStrider[In, Out]    { override val name = name; override def prompt = self.prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
 
   private def convoWf: List[Workflow[_]]   = convo.workflows.map(_.copy(name   = Some("Convo")))
   private def sessionWf: List[Workflow[_]] = session.workflows.map(_.copy(name = Some("Session")))

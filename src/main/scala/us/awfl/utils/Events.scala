@@ -15,6 +15,7 @@ object Events {
     tool_call: BaseValue[ToolCall],
     cost: BaseValue[Double],
     background: BaseValue[Boolean] = Env.background.getOrElse(Value(false)),
+    workdir: Value[String] = Value.nil,
     // Optional status update fields (backward-compatible defaults)
     status: Value[String] = str(""),
     error: Value[String] = Value.nil
