@@ -49,7 +49,7 @@ object Llm {
   // Server returns { result, usage, total_cost }
   case class ChatResponse(result: Value[Reply], total_cost: Value[Double])
   case class ChatJsonResponse[T](result: Value[T], total_cost: Value[Double])
-  case class ChatToolResponse(message: Value[ChatMessage], total_cost: Value[Double])
+  case class ChatToolResponse(message: Value[ChatMessage], total_cost: Value[Double], usage: Value[Usage])
 
   // Text mode (result.reply)
   def chat(
@@ -103,4 +103,58 @@ object Llm {
     val request = post[ChatArgs, ChatToolResponse](name, "llm/chat", obj(body), Auth()).flatMap(_.body)
     Block("chatBlock", List[Step[_, _]](toolChoice, request) -> request.resultValue)
   }
+
+  case class CompletionTokensDetails(
+    accepted_prediction_tokens: Value[Double],
+    audio_tokens: Value[Double],
+    reasoning_tokens: Value[Double],
+    rejected_prediction_tokens: Value[Double]
+  ) {
+    def +(o: CompletionTokensDetails): CompletionTokensDetails =
+      CompletionTokensDetails(
+        Value(accepted_prediction_tokens + o.accepted_prediction_tokens),
+        Value(audio_tokens + o.audio_tokens),
+        Value(reasoning_tokens + o.reasoning_tokens),
+        Value(rejected_prediction_tokens + o.rejected_prediction_tokens)
+      )
+  }
+
+  case class PromptTokensDetails(
+    audio_tokens: Value[Double],
+    cached_tokens: Value[Double]
+  ) {
+    def +(o: PromptTokensDetails): PromptTokensDetails =
+      PromptTokensDetails(
+        Value(audio_tokens + o.audio_tokens),
+        Value(cached_tokens + o.cached_tokens)
+      )
+  }
+
+  case class Usage(
+    completion_tokens: Value[Double],
+    completion_tokens_details: BaseValue[CompletionTokensDetails],
+    prompt_tokens: Value[Double],
+    prompt_tokens_details: BaseValue[PromptTokensDetails],
+    total_tokens: Value[Double]
+  ) {
+    def plus(o: Value[Usage]): Step[Usage, BaseValue[Usage]] = {
+      val buildCompleteDetails = Try("addCompleteDetails", List() -> completion_tokens_details)
+      val buildPromptDetails = Try("addPromptDetails", List() -> prompt_tokens_details)
+      Try("plusUsage", List[Step[?,?]](buildCompleteDetails, buildPromptDetails) -> obj(Usage(
+        Value(completion_tokens + o.get.completion_tokens),
+        obj(buildCompleteDetails.result + o.flatMap(_.completion_tokens_details).get),
+        Value(prompt_tokens + o.get.prompt_tokens),
+        obj(buildPromptDetails.result + o.flatMap(_.prompt_tokens_details).get),
+        Value(total_tokens + o.get.total_tokens)
+      )))
+    }
+  }
+
+  val zeroUsage = Usage(
+    Value(0),
+    obj(CompletionTokensDetails(Value(0), Value(0), Value(0), Value(0))),
+    Value(0),
+    obj(PromptTokensDetails(Value(0), Value(0))),
+    Value(0)
+  )
 }

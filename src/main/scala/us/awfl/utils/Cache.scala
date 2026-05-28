@@ -5,19 +5,30 @@ import io.circe.generic.auto._
 import us.awfl.dsl.*
 import us.awfl.dsl.Cel.*
 import us.awfl.dsl.CelOps.*
+import us.awfl.dsl.auto.given
 import us.awfl.services.Firebase
 
-object Cache {
+case class Cache(collection: Value[String]) {
+  def apply[T: Spec](id: Value[String])(step: Step[T, Resolved[T]]): Step[T, Value[T]] = apply(
+    s"cache_${step.name}",
+    id
+  )(step)
+
+  case class ListWrapper[T](list: ListValue[T])
+  def list[T: Spec](id: Value[String])(step: Step[T, ListValue[T]]): Step[T, ListValue[T]] = apply(
+    s"cache_${step.name}",
+    id
+  ) { Try[ListWrapper[T], Obj[ListWrapper[T]]]("wrapList", List(step) -> obj(ListWrapper(step.resultValue)), reRaise = true) }
+    .flatMapList(_.list)
+
   def apply[T: Spec](
     name: String,
-    collection: Value[String],
     id: Value[String],
-    thresholdMillis: Int,
-    step: Step[T, BaseValue[T]]
-  ): Step[T, Value[T]] = {
+    thresholdMillis: Value[Int] = Value.nil
+  )(step: Step[T, BaseValue[T]]): Step[T, Value[T]] = {
     import Cache._
 
-    val readStep = Firebase.read[CachedValue[T]](s"${name}Read", collection, str(id.cel))
+    val readStep = Firebase.read[CachedValue[T]](s"${name}Read", collection, id)
     val readBody = readStep.resultValue.flatMap(_.body)
 
     val nowField = CelConst("sys.now()")
@@ -34,9 +45,12 @@ object Cache {
 
     val conditionalRun = Switch(s"${name}IfStale", List(
       (
+        (readStep.resultValue === Cel.nil) ||
         !("body" in readStep.resultValue.cel) ||
-        !("updatedAt" in readBody.cel) ||
-        ((nowField - readBody.flatMap(_.updatedAt).cel) > thresholdMillis)
+        !("updatedAt" in readBody.cel) || (
+          (thresholdMillis !== Cel.nil) &&
+          ((nowField - readBody.flatMap(_.updatedAt).cel) > thresholdMillis)
+        )
       ) ->
         (List[Step[_, _]](step, updateStep) -> step.resultValue),
 
