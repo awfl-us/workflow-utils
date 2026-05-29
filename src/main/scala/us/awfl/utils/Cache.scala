@@ -58,7 +58,7 @@ case class Cache(collection: Value[String]) {
         (Nil -> readBody.flatMap(_.result)),
 
       (true: Cel) ->
-        (List(Raise(s"${name}_raiseFailedCache", obj(Error(str("Cache run failed"), Value(500))))) -> step.resultValue)
+        (List(Raise(s"${name}_raiseFailedCache", obj(Error(str("Cache run failed"), OptValue(Value[Int](500)))))) -> step.resultValue)
     ))
 
     Block(name, List[Step[_, _]](readStep, conditionalRun) -> conditionalRun.resultValue)

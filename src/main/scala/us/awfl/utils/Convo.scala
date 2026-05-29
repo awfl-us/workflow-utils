@@ -18,12 +18,18 @@ object Convo {
     ista.write(name, message, Value("sys.now()"), cost)
   }
 
-  val emptyYoj = Raise("emptyYoj", obj(Error(str("Empty Yoj returned"), Value(400))))
+  val emptyYoj = Raise("emptyYoj", obj(Error(str("Empty Yoj returned"), OptValue[Int](400))))
 
-  def complete[In: Yoj, Out: Spec: Ista](name: String, prompt: ListValue[ChatMessage], yoj: ListValue[ChatMessage], model: Value[String] = str("gpt-5"))(using kala: KalaVibhaga): Step[ChatJsonResponse[Out], Value[ChatJsonResponse[Out]]] = {
+  def complete[In: Yoj, Out: Spec: Ista](
+    name: String,
+    prompt: ListValue[ChatMessage],
+    yoj: ListValue[ChatMessage],
+    sessionId: Value[String],
+    model: Value[String] = str("gpt-5")
+  )(using kala: KalaVibhaga): Step[ChatJsonResponse[Out], Value[ChatJsonResponse[Out]]] = {
     val buildIsta = summon[Ista[Out]].build(kala)
     val messages = join(s"${name}_joinMessages", prompt, yoj, buildIsta.resultValue)
-    val chat = us.awfl.services.Llm.chatJson[Out](s"${name}_chat", messages.resultValue, model = model)
+    val chat = us.awfl.services.Llm.chatJson[Out](s"${name}_chat", messages.resultValue, sessionId, model = model)
     val switch = Switch(s"${name}_switch", List[(Cel, (List[Step[_, _]], BaseValue[ChatJsonResponse[Out]]))](
       (len(yoj) > 0) -> (List[Step[_, _]](buildIsta, messages, chat) -> chat.resultValue),
       (true: Cel) -> (List(emptyYoj) -> Value.nil)
@@ -37,6 +43,7 @@ object Convo {
     prompt: ListValue[ChatMessage],
     yoj: ListValue[ChatMessage],
     tools: ListValue[Tool],
+    sessionId: Value[String],
     toolChoice: BaseValue[ToolChoice] = ToolChoice.auto,
     model: Value[String] = str("gpt-4o"),
     temperature: Double = 0.8,
@@ -46,7 +53,8 @@ object Convo {
     val chat = us.awfl.services.Llm.chatWithTools(
       s"${name}_chat",
       messages.resultValue,
-      tools = tools,
+      tools,
+      sessionId,
       tool_choice = toolChoice,
       model = model,
       temperature = temperature,

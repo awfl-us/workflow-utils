@@ -57,7 +57,7 @@ object Locks {
       s"${stepName}_try",
       List(acquire) -> acquire.resultValue.flatMap(_.acquired),
       err => Switch(s"${stepName}_err", List(
-        (("code" in err.cel) && (err.get.code.cel === 409)) -> (List(Log(s"${stepName}_busy", str("Lock exists, skipping work."))) -> Value[Boolean](false)),
+        (("code" in err.cel) && (err.get.code.getOrElse(Value(0)) === 409)) -> (List(Log(s"${stepName}_busy", str("Lock exists, skipping work."))) -> Value[Boolean](false)),
         (true: Cel) -> (List(Raise(s"${stepName}_rethrow", err)) -> Value[Boolean](false))
       )).fn
     )

@@ -42,6 +42,8 @@ object Llm {
     temperature: Double,
     max_completion_tokens: BaseValue[Int],
     response_format: ResponseFormat,
+    sessionId: Value[String],
+    workflow_name: Value[String],
     tools: ListValue[Tool] = ListValue.empty,
     tool_choice: BaseValue[ToolChoice] = ToolChoice.auto
   )
@@ -55,12 +57,13 @@ object Llm {
   def chat(
     name: String,
     messages: ListValue[ChatMessage],
+    sessionId: Value[String],
     model: Value[String] = str("gpt-4o"),
     temperature: Double = 0.8,
-    maxTokens: BaseValue[Int] = obj(1024)
+    maxTokens: BaseValue[Int] = obj(1024),
   ): Post[ChatResponse] = {
     // Omit response_format for normal text mode to avoid unsupported param issues
-    val body = ChatArgs(messages, model, temperature, maxTokens, ResponseFormat("text"))
+    val body = ChatArgs(messages, model, temperature, maxTokens, ResponseFormat("text"), sessionId, WORKFLOW_ID)
     post[ChatArgs, ChatResponse](name, "llm/chat", obj(body), Auth())
   }
 
@@ -68,6 +71,7 @@ object Llm {
   def chatJson[T: Spec](
     name: String,
     messages: ListValue[ChatMessage],
+    sessionId: Value[String],
     model: Value[String] = str("gpt-5"),
     temperature: Double = 0.8
   ): Step[ChatJsonResponse[T], Value[ChatJsonResponse[T]]] = {
@@ -79,7 +83,7 @@ object Llm {
     val buildSchemaList = buildList(s"${name}_buildSchemaList", List(schema))
     val context = ListValue[ChatMessage](Resolver(CelPath(CelFunc("list.concat", messages.cel, buildSchemaList.resultValue(0).cel) :: Nil)))
 
-    val body = ChatArgs(context, model, temperature, Value("null"), ResponseFormat("json_object"))
+    val body = ChatArgs(context, model, temperature, Value("null"), ResponseFormat("json_object"), sessionId, WORKFLOW_ID)
     val postStep = post[ChatArgs, ChatToolResponse](s"${name}_post", "llm/chat", obj(body), Auth()).flatMap(_.body)
     val result = Try("decoded", List() -> obj(ChatJsonResponse(Value(CelFunc("json.decode", postStep.result.message.flatMap(_.content))), postStep.result.total_cost)))
     Block(s"${name}_block", List[Step[_, _]](spec, buildSchemaList, postStep, result) -> result.resultValue)
@@ -90,19 +94,38 @@ object Llm {
     name: String,
     messages: ListValue[ChatMessage],
     tools: ListValue[Tool],
+    sessionId: Value[String],
     tool_choice: BaseValue[ToolChoice] = ToolChoice.auto,
     model: Value[String] = str("gpt-4o"),
     temperature: Double = 0.8,
-    maxTokens: BaseValue[Int] = Value.nil
+    maxTokens: BaseValue[Int] = Value.nil,
   ): Step[ChatToolResponse, Value[ChatToolResponse]] = {
     val toolChoice = Switch("toolChoice", List(
       ((tools.cel !== Cel.nil) && (CelFunc("len", tools) > 0)) ->  (List() -> tool_choice),
       (true: Cel) -> (List() -> Value.nil[ToolChoice])
     ))
-    val body = ChatArgs(messages, model, temperature, maxTokens, ResponseFormat("text"), tools, toolChoice.resultValue)
+    val body = ChatArgs(messages, model, temperature, maxTokens, ResponseFormat("text"), sessionId, WORKFLOW_ID, tools, toolChoice.resultValue)
     val request = post[ChatArgs, ChatToolResponse](name, "llm/chat", obj(body), Auth()).flatMap(_.body)
     Block("chatBlock", List[Step[_, _]](toolChoice, request) -> request.resultValue)
   }
+
+  def usage(
+    name: String,
+    env: Env = Env.get
+  ): Step[Stats, Value[Stats]] =
+    get[UsageResponse](name, str(("llm/usage/": Cel) + env.sessionId + "/totals"), env = env)
+      .flatMap(_.body).flatMap(_.overall)
+
+  case class UsageResponse(
+    overall: Value[Stats],
+    by_workflow: Map[String, Stats]
+  )
+
+  case class Stats(
+    requests: Value[Int],
+    total_cost: Value[Double],
+    usage: Value[Usage]
+  )
 
   case class CompletionTokensDetails(
     accepted_prediction_tokens: Value[Double],
@@ -150,11 +173,11 @@ object Llm {
     }
   }
 
-  val zeroUsage = Usage(
-    Value(0),
-    obj(CompletionTokensDetails(Value(0), Value(0), Value(0), Value(0))),
-    Value(0),
-    obj(PromptTokensDetails(Value(0), Value(0))),
-    Value(0)
-  )
+  // val zeroUsage = Usage(
+  //   Value(0),
+  //   obj(CompletionTokensDetails(Value(0), Value(0), Value(0), Value(0))),
+  //   Value(0),
+  //   obj(PromptTokensDetails(Value(0), Value(0))),
+  //   Value(0)
+  // )
 }

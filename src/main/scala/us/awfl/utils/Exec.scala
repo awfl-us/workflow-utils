@@ -81,7 +81,7 @@ object Exec {
             err => Switch(
               s"${name}Switch",
               List(
-                (err.get.code.cel === 409) -> (List(updateExecLink) -> str("ok")),
+                (err.get.code.getOrElse(Value[Int](0)).cel === 409) -> (List(updateExecLink) -> str("ok")),
                 (true: Cel) -> (List(Raise(s"${name}Rethrow", err)) -> str("fail"))
               )
             ).fn
@@ -114,7 +114,7 @@ object Exec {
       err => Switch(
         s"${name}Switch",
         List(
-          (("code" in err) && (err.get.code.cel === 409)) -> (List(update) -> str("ok")),
+          (("code" in err) && (err.get.code.getOrElse(Value(0)) === 409)) -> (List(update) -> str("ok")),
           (true: Cel) -> (List(Raise(s"${name}Rethrow", err)) -> str("fail"))
         )
       ).fn

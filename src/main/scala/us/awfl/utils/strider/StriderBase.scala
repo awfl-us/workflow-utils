@@ -56,7 +56,8 @@ trait Strider[In, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[Out]) ext
     val complete = Convo.complete[In, Out](
       "complete",
       buildPrompt.resultValue,
-      buildYoj.resultValue
+      buildYoj.resultValue,
+      Env.sessionId
     )
 
     val doWriteSeg: Step[Out, BaseValue[Out]] = {

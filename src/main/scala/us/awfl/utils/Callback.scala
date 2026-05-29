@@ -12,6 +12,14 @@ case class Callback[T](id: Value[String]) {
       response
     ).flatMap(_.body)
   }
+
+  def failure(error: BaseValue[Error]): Step[Boolean, Value[Boolean]] = {
+    postV[Map[String, BaseValue[Error]], Boolean](
+      "callback",
+      str(("callbacks/": Cel) + id),
+      obj(Map("error" -> error))
+    ).flatMap(_.body)
+  }
 }
 
 object Callback {
@@ -54,11 +62,16 @@ object Callback {
       "events.await_callback",
       obj(AwaitCallbackArgs(createCallback.resultValue, obj(3600)))
     )
+    val body = awaitCallback.resultValue.flatMap(_.http_request).flatMap(_.body)
+    val checkError = Switch("checkError", List(
+      (("error" in body) && (CelFunc("get_type", CelFunc("map.get", body, "error")) === "map")) ->
+        (List(Raise("raise", Value[Error](CelFunc("map.get", body, "error")))) -> Value.nil),
+      (true: Cel) -> (List() -> body)
+    ))
 
     Try(
       "createCallback_try",
-      List[Step[?,?]](createCallback, saveCallback, runStep, awaitCallback) ->
-        awaitCallback.resultValue.flatMap(_.http_request).flatMap(_.body),
+      List[Step[?,?]](createCallback, saveCallback, runStep, awaitCallback, checkError) -> body,
       reRaise = true
     )
   }

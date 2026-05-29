@@ -62,7 +62,7 @@ object Firebase {
       s"${name}_tryRead",
       List(postStep) -> postStep.resultValue,
       err => Switch(s"${name}_switchRead", List(
-        (err.get.code.cel === 404) -> (List(Log(s"${name}_log404", str("404 - File not found"))) -> postStep.resultValue),
+        (err.get.code.getOrElse(Value(0)) === 404) -> (List(Log(s"${name}_log404", str("404 - File not found"))) -> postStep.resultValue),
         (true: Cel) -> (List(Raise(s"${name}_rethrow", err)) -> postStep.resultValue)
       )).fn
     )
