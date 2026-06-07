@@ -197,3 +197,22 @@ case class TermKala(termBegin: Value[Double], termEnd: Value[Double]) extends Ka
   override def log(name: String): Log = Log(name, str(("TermKala: ": Cel) + CelFunc("time.format", termEnd.cel, "America/New_York")))
   override val end: Value[Double] = termEnd
 }
+
+trait Sadhaka[In, Out] {
+  def complete(using yoj: Yoj[In], kala: KalaVibhaga): Step[Out, Value[Out]]
+}
+object Sadhaka {
+  def json[In, Out](prompt: String)(using ista: Ista[Out]): Sadhaka[In, Out] = new Sadhaka {
+    override def complete(using yoj: Yoj[In], kala: KalaVibhaga): Step[Out, Value[Out]] = {
+      val buildPrompt = buildList("buildPrompt", List(ChatMessage("system", str(prompt))))
+      val buildYoj = yoj.build
+      val complete = Convo.complete[In, Out](
+        "complete",
+        buildPrompt.resultValue,
+        buildYoj.resultValue,
+        Env.sessionId
+      )
+      Try("completeJson", List(buildPrompt, buildYoj, complete) -> complete.resultValue, reRaise = true)
+    }
+  }
+}

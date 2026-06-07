@@ -20,7 +20,7 @@ import us.awfl.utils.Env
 /**
  * Base Strider implementation with optional post-write hook for SegKala.
  */
-trait Strider[In, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[Out]) extends us.awfl.core.Workflow {
+trait Strider[In, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[Out], sadhaka: Sadhaka[In, Out]) extends us.awfl.core.Workflow {
   import StriderObj.*
 
   type Input = StriderInput
@@ -51,14 +51,7 @@ trait Strider[In, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[Out]) ext
       ((len(check.resultValue) === 0) || (check.resultValue(len(check.resultValue) - 1).flatMap(_.create_time).cel < StriderObj.segmentKala.end))
     ))
 
-    val buildPrompt = buildList("buildPrompt", List(ChatMessage("system", str(prompt))))
-    val buildYoj = yoj.build
-    val complete = Convo.complete[In, Out](
-      "complete",
-      buildPrompt.resultValue,
-      buildYoj.resultValue,
-      Env.sessionId
-    )
+    val complete = sadhaka.complete()
 
     val doWriteSeg: Step[Out, BaseValue[Out]] = {
       val newId        = Try("ista_write_newId", List() -> Value[String]("uuid.generate()"))
@@ -93,7 +86,7 @@ trait Strider[In, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[Out]) ext
     val workSwitch = Switch(
       "ista_write_switch",
       List(
-        shouldWrite.cel -> (List[Step[_, _]](buildPrompt, buildYoj, complete, doWrite) -> doWrite.resultValue),
+        shouldWrite.cel -> (List[Step[_, _]](complete, doWrite) -> doWrite.resultValue),
         (true: Cel) -> (List(Log("write_skipped", str("Summary already exists or no messages. Skipping write."))) -> Value("null"))
       )
     )

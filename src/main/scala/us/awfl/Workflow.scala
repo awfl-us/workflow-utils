@@ -22,10 +22,10 @@ trait Workflow {
     noPrefix.replace('.', '-').stripSuffix("$")
   }
 
-  def buildSteps[T: Spec](
-    main: (List[Step[_, _]], BaseValue[T]),
-    except: Resolved[Error] => (List[Step[_, _]], BaseValue[T])
-  ): (List[Step[_, _]], BaseValue[T]) = {
+  def buildSteps(
+    main: (List[Step[_, _]], BaseValue[Result]),
+    except: Resolved[Error] => (List[Step[_, _]], BaseValue[Result])
+  )(using Spec[Result]): (List[Step[_, _]], BaseValue[Result]) = {
     // Resolve execution IDs
     val triggeredExecId: Value[String] = Exec.currentExecId
     val callingExecId: Value[String] = Env.callingWorkflowExec.getOrElse(Value.nil)
