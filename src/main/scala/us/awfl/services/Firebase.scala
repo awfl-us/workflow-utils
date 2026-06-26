@@ -14,7 +14,7 @@ object Firebase {
   // Include userId in request bodies so it passes through by default
   case class UpdateArgs[T](
     collection: Value[String],
-    id: BaseValue[_],
+    id: BaseValue[?],
     contents: BaseValue[T],
     userId: Value[String] = Env.userId
   )
@@ -28,7 +28,7 @@ object Firebase {
   def create[T](
     name: String,
     collection: Value[String],
-    id: BaseValue[_],
+    id: BaseValue[?],
     contents: BaseValue[T]
   ): Post[Nothing] = {
     val body = UpdateArgs(collection, id, contents)
@@ -39,7 +39,7 @@ object Firebase {
   def update[T](
     name: String,
     collection: Value[String],
-    id: BaseValue[_],
+    id: BaseValue[?],
     contents: BaseValue[T]
   ): Post[Nothing] = {
     val body = UpdateArgs(collection, id, contents)

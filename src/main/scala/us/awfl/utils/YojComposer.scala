@@ -6,16 +6,18 @@ import us.awfl.dsl.auto.given
 import us.awfl.ista.ChatMessage
 import us.awfl.utils.TopicContextYoj
 import us.awfl.utils.Yoj
+import us.awfl.services.Context
 
 // Generic composer for assembling and running TopicContextYoj component trees.
 object YojComposer {
   def composed(
     name: String,
     childComponents: List[TopicContextYoj.ComponentSpec],
+    kala: Context.Kala,
     intro: Option[String] = None,
     promoteUpstream: Boolean = true,
     filters: ListValue[TopicContextYoj.FilterSpec] = ListValue.empty[TopicContextYoj.FilterSpec]
-  )(using kala: KalaVibhaga): Step[ChatMessage, ListValue[ChatMessage]] = {
+  ): Step[ChatMessage, ListValue[ChatMessage]] = {
     
     val spec: TopicContextYoj.ComponentSpec =
       TopicContextYoj.ComponentSpec(
@@ -25,12 +27,12 @@ object YojComposer {
       )
 
     val components = buildList[TopicContextYoj.ComponentSpec](
-      s"${name}_components_${Yoj.kalaName}",
+      s"${name}_components",
       List(spec)
     )
 
     val model = Try(
-      s"${name}_model_${Yoj.kalaName}",
+      s"${name}_model",
       List(components) -> obj(
         TopicContextYoj.Model(
           intro = intro.map(s => TopicContextYoj.Intro(system = Some(s))),
@@ -41,15 +43,15 @@ object YojComposer {
       )
     )
 
-    val call = TopicContextYoj.runWithModel(model.resultValue)
+    val call = TopicContextYoj.runWithModel(model.resultValue, obj(kala))
     val items = For[ChatMessage, ChatMessage](
-      s"for_${name}_items_${Yoj.kalaName}",
+      s"for_${name}_items",
       call.resultValue.flatMap(_.body).flatMap(_.yoj),
     ) { item => List() -> item }
 
     Block(
-      s"${name}YojBlock_${Yoj.kalaName}",
-      List[Step[_, _]](/*children, */components, model, call, items) -> items.resultValue
+      s"${name}YojBlock",
+      List[Step[?, ?]](/*children, */components, model, call, items) -> items.resultValue
     )
   }
 

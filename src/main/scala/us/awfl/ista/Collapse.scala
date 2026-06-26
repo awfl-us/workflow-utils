@@ -15,14 +15,7 @@ case class CollapseResponse(groups: ListValue[CollapsedGroup])
 
 object CollapseResponse {
   // Ista prompt for generating collapsed groups from context
-  given Ista[CollapseResponse] = Ista(
-    "collapsed",
-    _ => buildList(
-      "buildCollapseIsta",
-      List(
-        ChatMessage(
-          "system",
-          str(
+  given Ista[CollapseResponse] = Ista("collapsed") { _ =>
             """
             You are collapsing older conversation messages into compact, named groups that can be expanded later.
             Return valid JSON with this exact shape:
@@ -49,9 +42,5 @@ object CollapseResponse {
             - Be fiarly aggressive because reduntant or unneeded information cloggs context. Aim for getting the total context to less than 15k tokens, an exception would be complex, crucial moments of an important task. Otherwise, stay focused on quality of production, but tay midful to the overall vision.
             - NEVER collapse the most recent response(s)! That will be relevant for futher follow-up questions.
             """.stripMargin
-          )
-        )
-      )
-    )
-  )
+  }
 }

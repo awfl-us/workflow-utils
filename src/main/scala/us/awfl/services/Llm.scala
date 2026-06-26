@@ -24,15 +24,22 @@ object Llm {
   case class ToolFunctionDef(name: Value[String], description: Value[String], parameters: BaseValue[ToolDefProperty])
   case class Tool(`type`: Value[String] = str("function"), function: BaseValue[ToolFunctionDef])
 
+  // Service-facing variant that carries workflowName metadata alongside the LLM tool def
+  case class ToolWithWorkflow(
+    `type`: Value[String] = str("function"),
+    function: BaseValue[Llm.ToolFunctionDef],
+    workflowName: Value[String]
+  )
+
   sealed trait ToolChoice
   object ToolChoice {
     val auto: Value[ToolChoice] = Value(CelStr("auto"))
-    case class ToolChoiceFunction(name: String)
+    case class ToolChoiceFunction(name: Value[String])
     case class Function(function: ToolChoiceFunction, `type`: String = "function") extends ToolChoice
     object Function:
-      def apply(name: String): Function = Function(ToolChoiceFunction(name))
+      def apply(name: String): Function = Function(ToolChoiceFunction(str(name)))
 
-    given Spec[ToolChoice] = Spec(_ => Function(ToolChoiceFunction("")))
+    given Spec[ToolChoice] = Spec(_ => Function(ToolChoiceFunction(str(""))))
   }
 
   // Align with server: use max_completion_tokens
@@ -49,9 +56,9 @@ object Llm {
   )
 
   // Server returns { result, usage, total_cost }
-  case class ChatResponse(result: Value[Reply], total_cost: Value[Double])
-  case class ChatJsonResponse[T](result: Value[T], total_cost: Value[Double])
-  case class ChatToolResponse(message: Value[ChatMessage], total_cost: Value[Double], usage: Value[Usage])
+  // case class ChatResponse(result: Value[Reply], total_cost: Value[Double])
+  // case class ChatJsonResponse[T](result: Value[T], total_cost: Value[Double])
+  case class ChatResponse[T](message: Value[T], total_cost: Value[Double], usage: Value[Usage])
 
   // Text mode (result.reply)
   def chat(
@@ -61,10 +68,10 @@ object Llm {
     model: Value[String] = str("gpt-4o"),
     temperature: Double = 0.8,
     maxTokens: BaseValue[Int] = obj(1024),
-  ): Post[ChatResponse] = {
+  ): Post[ChatResponse[String]] = {
     // Omit response_format for normal text mode to avoid unsupported param issues
     val body = ChatArgs(messages, model, temperature, maxTokens, ResponseFormat("text"), sessionId, WORKFLOW_ID)
-    post[ChatArgs, ChatResponse](name, "llm/chat", obj(body), Auth())
+    post[ChatArgs, ChatResponse[String]](name, "llm/chat", obj(body), Auth())
   }
 
   // JSON mode (result is parsed JSON object)
@@ -74,7 +81,7 @@ object Llm {
     sessionId: Value[String],
     model: Value[String] = str("gpt-5"),
     temperature: Double = 0.8
-  ): Step[ChatJsonResponse[T], Value[ChatJsonResponse[T]]] = {
+  ): Step[ChatResponse[T], Value[ChatResponse[T]]] = {
     val spec = Try("spec", List() -> str(CelValue(obj(implicitly[Spec[T]].init(Resolver("example"))))))
     val schema = ChatMessage(
       role = "system",
@@ -84,9 +91,9 @@ object Llm {
     val context = ListValue[ChatMessage](Resolver(CelPath(CelFunc("list.concat", messages.cel, buildSchemaList.resultValue(0).cel) :: Nil)))
 
     val body = ChatArgs(context, model, temperature, Value("null"), ResponseFormat("json_object"), sessionId, WORKFLOW_ID)
-    val postStep = post[ChatArgs, ChatToolResponse](s"${name}_post", "llm/chat", obj(body), Auth()).flatMap(_.body)
-    val result = Try("decoded", List() -> obj(ChatJsonResponse(Value(CelFunc("json.decode", postStep.result.message.flatMap(_.content))), postStep.result.total_cost)))
-    Block(s"${name}_block", List[Step[_, _]](spec, buildSchemaList, postStep, result) -> result.resultValue)
+    val postStep = post[ChatArgs, ChatResponse[ChatMessage]](s"${name}_post", "llm/chat", obj(body), Auth()).flatMap(_.body)
+    val result = Try("decoded", List() -> obj(ChatResponse(Value(CelFunc("json.decode", postStep.result.message.flatMap(_.content))), postStep.result.total_cost, postStep.result.usage)))
+    Block(s"${name}_block", List[Step[?, ?]](spec, buildSchemaList, postStep, result) -> result.resultValue)
   }
 
   // Tool-enabled chat (surface tool_calls)
@@ -99,14 +106,14 @@ object Llm {
     model: Value[String] = str("gpt-4o"),
     temperature: Double = 0.8,
     maxTokens: BaseValue[Int] = Value.nil,
-  ): Step[ChatToolResponse, Value[ChatToolResponse]] = {
+  ): Step[ChatResponse[ChatMessage], Value[ChatResponse[ChatMessage]]] = {
     val toolChoice = Switch("toolChoice", List(
       ((tools.cel !== Cel.nil) && (CelFunc("len", tools) > 0)) ->  (List() -> tool_choice),
       (true: Cel) -> (List() -> Value.nil[ToolChoice])
     ))
     val body = ChatArgs(messages, model, temperature, maxTokens, ResponseFormat("text"), sessionId, WORKFLOW_ID, tools, toolChoice.resultValue)
-    val request = post[ChatArgs, ChatToolResponse](name, "llm/chat", obj(body), Auth()).flatMap(_.body)
-    Block("chatBlock", List[Step[_, _]](toolChoice, request) -> request.resultValue)
+    val request = post[ChatArgs, ChatResponse[ChatMessage]](name, "llm/chat", obj(body), Auth()).flatMap(_.body)
+    Block("chatBlock", List[Step[?, ?]](toolChoice, request) -> request.resultValue)
   }
 
   def usage(

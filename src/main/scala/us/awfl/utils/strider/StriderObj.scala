@@ -14,13 +14,11 @@ import us.awfl.services.Firebase.create
 import us.awfl.services.Firebase.update
 import us.awfl.utils.SegKala
 import us.awfl.utils.Env
+import us.awfl.services.Context
 
 object StriderObj {
-  val inputVal = init[StriderInput]("input")
-  val input = inputVal.get
-  given Convo.SessionId = Convo.SessionId(Env.sessionId)
-
-  private val windowSeconds  = Value[Double](CelFunc("default", input.windowSeconds, Segments.DefaultWindowSeconds))
+  val input = init[StriderInput[?]]("input").get
+  val windowSeconds  = Value[Double](CelFunc("default", input.windowSeconds, Segments.DefaultWindowSeconds))
   private val overlapSeconds = Value[Int](CelFunc("default", input.overlapSeconds, Segments.DefaultOverlapSeconds))
 
   val segments: Step[SegKala, ListValue[SegKala]] =

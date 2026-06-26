@@ -1,5 +1,5 @@
 // build.sbt
-ThisBuild / scalaVersion := "3.3.1"
+ThisBuild / scalaVersion := "3.4.2"
 
 // Versioning via tags and stable version scheme (sbt-dynver)
 ThisBuild / versionScheme := Some("early-semver")
@@ -36,6 +36,6 @@ libraryDependencies ++= Seq(
   "us.awfl" %% "dsl" % "0.3.3"
 )
 
-// dependencyOverrides += "us.awfl" %% "dsl" % "0.1.0-SNAPSHOT"
+dependencyOverrides += "us.awfl" %% "dsl" % "0.1.0-SNAPSHOT"
 
 scalacOptions ++= Seq("-deprecation", "-feature", "-language:implicitConversions")

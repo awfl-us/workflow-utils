@@ -8,7 +8,7 @@ def zip[A, B, Out: Spec](
   name: String,
   left: ListValue[A],
   right: ListValue[B]
-)(merge: (Value[A], Value[B]) => (List[Step[_, _]], BaseValue[Out])): ForRange[Out] = {
+)(merge: (Value[A], Value[B]) => (List[Step[?, ?]], BaseValue[Out])): ForRange[Out] = {
   ForRange[Out](name, 0, len(left)) { i =>
     val a = left(i)
     val b = right(i)

@@ -46,7 +46,7 @@ object Segments {
     // Expose a single step that yields List[SegKala]
     Block(
       s"${stepPrefix}_block",
-      List[Step[_, _]](raw, convert) -> convert.resultValue
+      List[Step[?, ?]](raw, convert) -> convert.resultValue
     )
   }
 }

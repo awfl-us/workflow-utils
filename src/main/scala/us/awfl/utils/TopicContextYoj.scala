@@ -46,7 +46,7 @@ object TopicContextYoj {
     filters: ListValue[FilterSpec]
   )
 
-  private def encodeKala(k: KalaVibhaga): BaseValue[Ctx.Kala] = k match {
+  def encodeKala(k: KalaVibhaga): Ctx.Kala = k match {
     case seg: SegKala      => Ctx.segKala(seg.sessionId, seg.end, seg.windowSeconds)
     case sesh: SessionKala => Ctx.sessionKala(sesh.sessionId, sesh.end)
     case week: WeekKala    => Ctx.weekKala(week.end)
@@ -61,24 +61,24 @@ object TopicContextYoj {
   )
 
   // Return the raw POST step so callers can access .resultValue.flatMap(_.body).flatMap(_.yoj)
-  def run(using kala: KalaVibhaga): Post[YojResult] =
-    post[TopicArgs, YojResult](
-      "TopicContextYoj_run",
-      "context/topicContextYoj/run",
-      obj(TopicArgs(encodeKala(kala), str("TopicContext")))
-    )
+  // def run(using kala: KalaVibhaga): Post[YojResult] =
+  //   post[TopicArgs, YojResult](
+  //     "TopicContextYoj_run",
+  //     "context/topicContextYoj/run",
+  //     obj(TopicArgs(encodeKala(kala), str("TopicContext")))
+  //   )
 
-  def run(includeDocId: Boolean)(using kala: KalaVibhaga): Post[YojResult] =
+  def run(kala: BaseValue[Ctx.Kala], includeDocId: Boolean): Post[YojResult] =
     post[TopicArgs, YojResult](
       "TopicContextYoj_run_with_docId",
       "context/topicContextYoj/run",
-      obj(TopicArgs(encodeKala(kala), str("TopicContext"), includeDocId = Value(includeDocId)))
+      obj(TopicArgs(kala, str("TopicContext"), includeDocId = Value(includeDocId)))
     )
 
-  def runWithModel(model: BaseValue[Model], includeDocId: Option[Boolean] = None)(using kala: KalaVibhaga): Post[YojResult] = {
+  def runWithModel(model: BaseValue[Model], kala: BaseValue[Ctx.Kala], includeDocId: Option[Boolean] = None): Post[YojResult] = {
     val args = includeDocId match {
-      case Some(flag) => TopicArgs(encodeKala(kala), includeDocId = Value(flag), model = model)
-      case None       => TopicArgs(encodeKala(kala), model = model)
+      case Some(flag) => TopicArgs(kala, includeDocId = Value(flag), model = model)
+      case None       => TopicArgs(kala, model = model)
     }
     post[TopicArgs, YojResult](
       "TopicContextYoj_run_with_model",

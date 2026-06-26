@@ -8,6 +8,7 @@ import us.awfl.dsl.CelOps._
 import Firebase.{ListItem, ListResult}
 import us.awfl.utils.post
 import us.awfl.utils.Env
+import us.awfl.utils.KalaVibhaga
 
 // Context service: client for JS server-side Prakriya context endpoints
 // Endpoints are mounted under /context (see functions/jobs/context/prakriyaContext.js)
@@ -17,25 +18,25 @@ object Context {
   case class Kala(
     kind: Value[String],
     sessionId: Value[String] = Value("null"),
-    end: BaseValue[Double] = Value("null"),
-    windowSeconds: BaseValue[Double] = Value("null"),
-    sessionEnd: BaseValue[Double] = Value("null"),
-    weekEnd: BaseValue[Double] = Value("null"),
-    begin: BaseValue[Double] = Value("null")
+    end: Value[Double] = Value("null"),
+    windowSeconds: Value[Double] = Value("null"),
+    sessionEnd: Value[Double] = Value("null"),
+    weekEnd: Value[Double] = Value("null"),
+    begin: Value[Double] = Value("null")
   )
 
   // Convenience constructors to build Kala payloads
-  def segKala(sessionId: Value[String], end: BaseValue[Double], windowSeconds: BaseValue[Double]): BaseValue[Kala] =
-    obj(Kala(str("SegKala"), sessionId, end, windowSeconds))
+  def segKala(sessionId: Value[String], end: Value[Double], windowSeconds: Value[Double]): Kala =
+    Kala(str("SegKala"), sessionId, end, windowSeconds)
 
-  def sessionKala(sessionId: Value[String], sessionEnd: BaseValue[Double]): BaseValue[Kala] =
-    obj(Kala(str("SessionKala"), sessionId, sessionEnd = sessionEnd))
+  def sessionKala(sessionId: Value[String], sessionEnd: Value[Double]): Kala =
+    Kala(str("SessionKala"), sessionId, sessionEnd = sessionEnd)
 
-  def weekKala(weekEnd: BaseValue[Double]): BaseValue[Kala] =
-    obj(Kala(str("WeekKala"), weekEnd = weekEnd))
+  def weekKala(weekEnd: Value[Double]): Kala =
+    Kala(str("WeekKala"), weekEnd = weekEnd)
 
-  def termKala(begin: BaseValue[Double], end: BaseValue[Double]): BaseValue[Kala] =
-    obj(Kala(str("TermKala"), begin = begin, end = end))
+  def termKala(begin: Value[Double], end: Value[Double]): Kala =
+    Kala(str("TermKala"), begin = begin, end = end)
 
   // Request bodies
   case class YojReadArgs(name: Value[String], kala: BaseValue[Kala], userId: Value[String] = Env.userId)

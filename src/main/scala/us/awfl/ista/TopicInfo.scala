@@ -13,7 +13,7 @@ import us.awfl.utils.Convo.StepName
 
 case class Topic(topic: Value[String], breadth: Value[String], depth: Value[String], startingPoint: Value[String], endingPoint: Value[String], details: Value[String])
 
-given Ista[Topic] = Ista("topics", kala => buildList("buildTopicIsta", List(ChatMessage("system", str(
+given Ista[Topic] = Ista("topics") { kala => //buildList("buildTopicIsta", List(ChatMessage("system", str(
   """Return topics discussed. Typically a conversation will include 1-3 topics. Provide these details about the topics discussed:
     | - topic: The name of the topic, keeps names of known topics consistent.
     | - breadth: Qualify the breadth of the discussion on this topic in detail.
@@ -21,36 +21,36 @@ given Ista[Topic] = Ista("topics", kala => buildList("buildTopicIsta", List(Chat
     | - startingPoint: Where did the discussion on this topic start? (We want to map the the progression, depth and breadth accross multiple conversations over time)
     | - endingPoint: Where did the converstion leave off or conclude?
     | - details: Record the relevant details of the discussion on this topic.
-  """.stripMargin
-)), ChatMessage("system", str(kala match {
+  """.stripMargin + (kala match {
+//)), ChatMessage("system", str(kala match {
   case _: SegKala => "Don't repeat information already contained in previous summaries and extracted info."
   case _: SessionKala => "Refine (or initiate) the whole session topic summary."
   case _: WeekKala => "Refine (or initiate) the whole week topic summary."
   case _: TermKala => "Refine (or initiate) the whole term topic summary."
-})))))
+})}//))))
 
 case class Nugget(details: Value[String])
 
-given Ista[Nugget] = Ista("nuggets", _ => buildList("buildNuggetIsta", List(ChatMessage("system", str(
+given Ista[Nugget] = Ista("nuggets")(_ => //buildList("buildNuggetIsta", List(ChatMessage("system", str(
   """Extract key nuggets from the conversation. These are the notable questions/conclusions/learnings that will be most interesting post-conversation when revisting the discussed topics.
     |Provide the following field:
     | - details: Details of the info nugget.
   """.stripMargin
-)))))
+)//))))
 
 case class Reflection(critique: Value[String])
 
-given Ista[Reflection] = Ista("reflections", _ => buildList("buildRelfectionIsta", List(ChatMessage("system", str(
+given Ista[Reflection] = Ista("reflections")( _ => //buildList("buildRelfectionIsta", List(ChatMessage("system", str(
   """Optionally, provide reflections on your own performance in the converstation. How could you have served the user better?
     |Any information about the user or context that would have been useful to have earlier?
     |Provide the following field:
     | - critique: Details on what you should have done differently or known beforehand.
   """.stripMargin
-)))))
+)//))))
 
 case class Artifact(name: Value[String], path: Value[String], `type`: Value[String], contents: Value[String], description: Value[String])
 
-given Ista[Artifact] = Ista("artifacts", _ => buildList("buildArtifactIsta", List(ChatMessage("system", str(
+given Ista[Artifact] = Ista("artifacts")( _ => //buildList("buildArtifactIsta", List(ChatMessage("system", str(
   """Extract all important artifacts (documents, snippets, etc.) from the conversation.
     |These are often the most important information in a convo because they serve as the concrete elements that give a convo it's value.
     |Provide the following fields for each artifact:
@@ -60,18 +60,18 @@ given Ista[Artifact] = Ista("artifacts", _ => buildList("buildArtifactIsta", Lis
     | - contents: (Only if not a saved file) Contents of the artifact.
     | - description: Context for the artifact and any important info that needs to accompany it.
   """.stripMargin
-)))))
+)//))))
 
 case class TopicInfo(topics: ListValue[Topic], nuggets: ListValue[Nugget], reflections: ListValue[Reflection], artifacts: ListValue[Artifact], shouldSaveReflection: Value[Boolean])
 
 object TopicInfo {
-  given Ista[TopicInfo] = Ista("topicInfos", { k =>
-    val topicIsta = summon[Ista[Topic]].build(k)
-    val nuggetIsta = summon[Ista[Nugget]].build(k)
-    val reflectionIsta = summon[Ista[Reflection]].build(k)
-    val artifactIsta = summon[Ista[Artifact]].build(k)
+  given Ista[TopicInfo] = Ista("topicInfos") { k =>
+    // val topicIsta = summon[Ista[Topic]].build(k)
+    // val nuggetIsta = summon[Ista[Nugget]].build(k)
+    // val reflectionIsta = summon[Ista[Reflection]].build(k)
+    // val artifactIsta = summon[Ista[Artifact]].build(k)
 
-    val topicInfoIsta = buildList("buildTopicInfoIsta", List(ChatMessage("system", str(
+    // val topicInfoIsta = buildList("buildTopicInfoIsta", List(ChatMessage("system", str(
         """Please extract topic information from the conversation. The idea is to distil important information/conclusions/results from the convo that can then be used to build a system representing the user's preferences, progression and overall goals.
         |Extract the following types of information:
         | - topics: Topics discussed.
@@ -80,19 +80,19 @@ object TopicInfo {
         | - artifacts: Important data chunks to retain.
         | - shouldSaveReflection: Should we update AGENT.md (or similiar) to better stear futher operations? Can we improve general instructions by adding widely applicable information? Use sparingly so we don't polute our agent files. (boolean)
         """.stripMargin
-    ))))
+    // ))))
 
-    val joinStep = join(
-      "joinTopicInfoIsta",
-      topicIsta.resultValue,
-      nuggetIsta.resultValue,
-      reflectionIsta.resultValue,
-      artifactIsta.resultValue,
-      topicInfoIsta.resultValue
-    )
+    // val joinStep = join(
+    //   "joinTopicInfoIsta",
+    //   topicIsta.resultValue,
+    //   nuggetIsta.resultValue,
+    //   reflectionIsta.resultValue,
+    //   artifactIsta.resultValue,
+    //   topicInfoIsta.resultValue
+    // )
 
-    Block("topicInfoIstaBlock", List(topicIsta, nuggetIsta, reflectionIsta, artifactIsta, topicInfoIsta, joinStep) -> joinStep.resultValue)
-  })
+    // Block("topicInfoIstaBlock", List(topicIsta, nuggetIsta, reflectionIsta, artifactIsta, topicInfoIsta, joinStep) -> joinStep.resultValue)
+  }
 
   given Yoj[TopicInfo] = Yoj("topicInfos", "Previously extracted topic info:\r")
 }

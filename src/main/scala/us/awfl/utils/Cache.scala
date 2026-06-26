@@ -52,7 +52,7 @@ case class Cache(collection: Value[String]) {
           ((nowField - readBody.flatMap(_.updatedAt).cel) > thresholdMillis)
         )
       ) ->
-        (List[Step[_, _]](step, updateStep) -> step.resultValue),
+        (List[Step[?, ?]](step, updateStep) -> step.resultValue),
 
       ("body" in readStep.resultValue.cel) ->
         (Nil -> readBody.flatMap(_.result)),
@@ -61,7 +61,7 @@ case class Cache(collection: Value[String]) {
         (List(Raise(s"${name}_raiseFailedCache", obj(Error(str("Cache run failed"), OptValue(Value[Int](500)))))) -> step.resultValue)
     ))
 
-    Block(name, List[Step[_, _]](readStep, conditionalRun) -> conditionalRun.resultValue)
+    Block(name, List[Step[?, ?]](readStep, conditionalRun) -> conditionalRun.resultValue)
   }
 
   case class CachedValueWrite[T](updatedAt: Value[String], result: BaseValue[T])

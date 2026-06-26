@@ -2,7 +2,6 @@ package us.awfl.utils
 
 import us.awfl.dsl.*
 import us.awfl.dsl.auto.given
-import us.awfl.services.Llm.ChatToolResponse
 
 case class Env(
   userId: Value[String] = Env.userId,

@@ -14,16 +14,18 @@ import us.awfl.utils.Convo
 case class ConvoSummary(title: Value[String], summary: Value[String])
 
 object ConvoSummary:
-  given Ista[ConvoSummary] = Ista("summaries", kala => buildList("buildConvoSummaryIsta", List(ChatMessage("system", str(
+  given Ista[ConvoSummary] = Ista("summaries") { kala =>
     """Summarize the convo, return a JSON in this format:
     { "title": "(short title for the convo, ommit if no information is provided)", "summary": "(Summary here)" }
-    """.stripMargin
-  )),ChatMessage("system", str(kala match {
-    case _: SegKala => "Don't repeat information already contained in previous summaries and extracted info."
-    case _: SessionKala => "Refine (or initiate) the whole session summary."
-    case _: WeekKala => "Refine (or initiate) the whole week summary."
-    case _: TermKala => "Refine (or initiate) the whole term summary."
-  })))))
+
+    """.stripMargin +
+    (kala match {
+      case _: SegKala => "Don't repeat information already contained in previous summaries and extracted info."
+      case _: SessionKala => "Refine (or initiate) the whole session summary."
+      case _: WeekKala => "Refine (or initiate) the whole week summary."
+      case _: TermKala => "Refine (or initiate) the whole term summary."
+    })
+  }
 
   given Yoj[ConvoSummary] = Yoj("summaries", "Summary of older conversation messages:\r")
 
@@ -50,6 +52,6 @@ case class ChatMessage(
 object ChatMessage:
   def apply(role: String, content: Value[String]): ChatMessage = ChatMessage(str(role), content)
 
-  given Ista[ChatMessage] = Ista("messages", _ => buildList("buildChatMessageYoj", List(ChatMessage("system", str("Return a message")))))
+  given Ista[ChatMessage] = Ista.nil
 
   given Yoj[ChatMessage] = Yoj("messages", "")

@@ -15,6 +15,11 @@ import us.awfl.services.Firebase.listAt
 import us.awfl.services.Firebase
 import us.awfl.utils.Convo.StepName
 import us.awfl.utils.TopicContextYoj
+import us.awfl.services.Llm
+import us.awfl.services.Llm.ChatResponse
+import us.awfl.core.WorkflowId
+import us.awfl.services.Context
+import us.awfl.services.Llm.ToolFunctionDef
 
 // यो जना — पदानां युक्तिः वा संयोजनम्। 
 // इयं रचना, यया इष्टस्य सिद्धिः साध्यते। 
@@ -22,12 +27,10 @@ import us.awfl.utils.TopicContextYoj
 case class Yoj[T](
   name: String,
   // Old build signature: produce ChatMessages for this Yoj at the given kala
-  buildYoj: KalaVibhaga => Step[ChatMessage, ListValue[ChatMessage]],
+  build: Context.Kala => Step[ChatMessage, ListValue[ChatMessage]],
   // ComponentSpec value (no kala function needed)
   component: TopicContextYoj.ComponentSpec
-) {
-  def build(using kala: KalaVibhaga): Step[ChatMessage, ListValue[ChatMessage]] = buildYoj(kala)
-}
+)
 // Yojanā — "Arrangement or alignment of semantic units."
 // The compositional method used to align Pada or Ista units to realize meaningful structure.
 
@@ -60,16 +63,14 @@ object Yoj:
       name,
       // buildYoj: render this component through TopicContextYoj
       { kala =>
-        given KalaVibhaga = kala
-
         val comp = component(name, framing)
         val components = buildList[TopicContextYoj.ComponentSpec](
-          s"${name}_components_${Yoj.kalaName}",
+          s"${name}_components",
           List(comp)
         )
 
         val model = Try(
-          s"${name}_model_${Yoj.kalaName}",
+          s"${name}_model",
           List(components) -> obj(
             TopicContextYoj.Model(
               intro = None,
@@ -80,13 +81,13 @@ object Yoj:
           )
         )
 
-        val call = TopicContextYoj.runWithModel(model.resultValue)
+        val call = TopicContextYoj.runWithModel(model.resultValue, obj(kala))
         val items = For[ChatMessage, ChatMessage](
-          s"for_${name}_items_${Yoj.kalaName}",
+          s"for_${name}_items",
           call.resultValue.flatMap(_.body).flatMap(_.yoj)
         ) { item => List() -> item }
 
-        Block(s"${name}_yoj_block_${Yoj.kalaName}", List[Step[_, _]](components, model, call, items) -> items.resultValue)
+        Block(s"${name}_yoj_block", List[Step[?, ?]](components, model, call, items) -> items.resultValue)
       },
       component(name, framing)
     )
@@ -94,7 +95,11 @@ object Yoj:
 // इष्टः — यः अभिलषितः अर्थः। 
 // प्रयोजनदृष्ट्या अपेक्षितः परिणामः। 
 // उदाहरणतः, यं विषयं प्राप्तुं वाञ्छति प्रणेता, स इष्टः।
-case class Ista[T: Spec](name: String, build: KalaVibhaga => Step[ChatMessage, ListValue[ChatMessage]]) {
+case class Ista[T: Spec](
+  name: String,
+  description: KalaVibhaga => String,
+  tool: KalaVibhaga => Option[BaseValue[Llm.Tool]]
+) {
   def convoCollection(sessionId: Value[String]) = str(("convo.sessions/": Cel) + sessionId.cel + "/" + name)
 
   def write(stepName: String, contents: BaseValue[T], at: Value[Double], cost: Value[Double])(using kala: KalaVibhaga): Post[Nothing] = {
@@ -112,7 +117,7 @@ case class Ista[T: Spec](name: String, build: KalaVibhaga => Step[ChatMessage, L
         )
         Block(
           s"${stepName}_seg_write_with_session_update",
-          List[Step[_, _]](newId, createChild, updateParent) -> createChild.resultValue
+          List[Step[?, ?]](newId, createChild, updateParent) -> createChild.resultValue
         )
       case SessionKala(sessionId, sessionEnd) => update(s"${stepName}_write_${name}Ista", str(("log.sessions.": Cel) + name), sessionId, ts)
       case WeekKala(weekEnd)                  => update(s"${stepName}_write_${name}Ista_WeekKala", str(("log.weekly.": Cel) + name), Value(CelFunc("time.format", weekEnd.cel, "America/New_York")), ts)
@@ -139,8 +144,26 @@ case class Ista[T: Spec](name: String, build: KalaVibhaga => Step[ChatMessage, L
     val forItems = For[ListItem[Timestamped[T]], Timestamped[T]](s"for_${name}Ista", results.resultValue.flatMap(_.documents)) { item =>
       List(Log(s"log_${name}Ista_read", str(("Read items: ": Cel) + CelFunc("json.encode_to_string", item.cel)))) -> item.flatMap(_.data)
     }
-    Block(s"${name}_readIstaBlock", List[Step[_, _]](log, results, forItems) -> forItems.resultValue)
+    Block(s"${name}_readIstaBlock", List[Step[?, ?]](log, results, forItems) -> forItems.resultValue)
   }
+}
+
+object Ista {
+  def apply[T: Spec](name: String)(description: KalaVibhaga => String): Ista[T] = {
+    def tool(kala: KalaVibhaga) = {
+      given KalaVibhaga = kala
+      Some(obj(Llm.Tool(
+        function = obj(ToolFunctionDef(
+          name = str(name),
+          description = str(description(kala)),
+          parameters = Value[Llm.ToolDefProperty](CelStr(JsonSchema.documentJsonWithKala[T]()))
+        ))
+      )))
+    }
+    Ista(name, description, tool)
+  }
+
+  def nil[T: Spec]: Ista[T] = Ista("nil", _ => "nil", _ => None)
 }
 // Iṣṭaḥ — "That which is desired or intended."
 // A target or goal that the system wishes to extract or realize from context.
@@ -198,21 +221,12 @@ case class TermKala(termBegin: Value[Double], termEnd: Value[Double]) extends Ka
   override val end: Value[Double] = termEnd
 }
 
-trait Sadhaka[In, Out] {
-  def complete(using yoj: Yoj[In], kala: KalaVibhaga): Step[Out, Value[Out]]
-}
-object Sadhaka {
-  def json[In, Out](prompt: String)(using ista: Ista[Out]): Sadhaka[In, Out] = new Sadhaka {
-    override def complete(using yoj: Yoj[In], kala: KalaVibhaga): Step[Out, Value[Out]] = {
-      val buildPrompt = buildList("buildPrompt", List(ChatMessage("system", str(prompt))))
-      val buildYoj = yoj.build
-      val complete = Convo.complete[In, Out](
-        "complete",
-        buildPrompt.resultValue,
-        buildYoj.resultValue,
-        Env.sessionId
-      )
-      Try("completeJson", List(buildPrompt, buildYoj, complete) -> complete.resultValue, reRaise = true)
-    }
-  }
+// Yoj not yet wired into agent input
+trait Sadhaka[Params] {
+  // def args(using kala: KalaVibhaga): BaseValue[RunWorkflowArgs[?]]
+  def complete[In: Yoj, Out: Ista: Spec](
+    query: String,
+    workflowId: WorkflowId[Params, Llm.ChatResponse[ChatMessage]],
+    // callback: Callback[Llm.ChatResponse[Out]]
+  )(using kala: KalaVibhaga): Step[Llm.ChatResponse[Out], Value[Llm.ChatResponse[Out]]]
 }
