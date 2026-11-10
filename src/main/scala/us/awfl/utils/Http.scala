@@ -6,7 +6,15 @@ import io.circe.generic.auto._
 import io.circe.Encoder
 
 // Use plural jobs prefix for all HTTP calls and OIDC audience
-case class Auth(`type`: Value[String] = str("OIDC"), audience: Value[String] = Env.BASE_URL)
+// Keep Google's OIDC authentication for every Workflow HTTP request. Cloud Run
+// validates `aud` against its service origin, which may differ from BASE_URL
+// when BASE_URL points at a workspace-specific /dev/... HTTP gateway path.
+// The optional override retains the existing BASE_URL default for production
+// and other callers. It propagates through child Workflows via Env.
+case class Auth(
+  `type`: Value[String] = str("OIDC"),
+  audience: Value[String] = Value[String]("""default(map.get(input.env, "OIDC_AUDIENCE"), input.env.BASE_URL)""")
+)
 
 type Post[Out] = Step[PostResult[Out], Value[PostResult[Out]]]
 
