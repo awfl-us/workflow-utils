@@ -10,6 +10,9 @@ case class Env(
   // Caller exec id (if this workflow was triggered by another workflow)
   callingWorkflowExec: OptValue[String] = OptValue(Exec.currentExecId),
   BASE_URL: Value[String] = Env.BASE_URL,
+  // Cloud dev calls can use a workspace-specific BASE_URL while authenticating
+  // to the root Cloud Run jobs URL. Omitted for existing production callers.
+  OIDC_AUDIENCE: OptValue[String] = OptValue(Value[String]("""map.get(input.env, "OIDC_AUDIENCE")""")),
   background: OptValue[Boolean] = Env.background,
   projectId: Value[String] = Env.projectId,
   sessionId: Value[String] = Env.sessionId,
