@@ -12,5 +12,5 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: sbt/setup-sbt@v1
-      - name: Compile and validate typed schema example and 404 recovery
-        run: sbt -batch 'Test / runMain us.awfl.utils.SchemaExampleSmoke'
+      - name: Compile and validate Firebase 404 recovery
+        run: sbt -batch 'Test / runMain us.awfl.utils.FirebaseRecoverySmoke'

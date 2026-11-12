@@ -33,8 +33,7 @@ ThisBuild / version ~= { v =>
 
 // Dependencies
 libraryDependencies ++= Seq(
-  "us.awfl" %% "dsl" % "0.3.5",
-  "io.circe" %% "circe-parser" % "0.14.7" % Test
+  "us.awfl" %% "dsl" % "0.3.5"
 )
 
 // dependencyOverrides += "us.awfl" %% "dsl" % "0.1.0-SNAPSHOT"
