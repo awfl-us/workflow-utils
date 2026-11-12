@@ -81,11 +81,11 @@ object Llm {
       content = str(("Respond with a JSON in this format:\r": Cel) + spec.resultValue.cel)
     )
     val buildSchemaList = buildList(s"${name}_buildSchemaList", List(schema))
-    val context = ListValue[ChatMessage](Resolver(CelPath(CelFunc("list.concat", messages.cel, buildSchemaList.resultValue(0).cel) :: Nil)))
+    val context = ListValue[ChatMessage](Resolver(CelPath(list.concat( messages.cel, buildSchemaList.resultValue(0).cel) :: Nil)))
 
     val body = ChatArgs(context, model, temperature, Value("null"), ResponseFormat("json_object"), sessionId, WORKFLOW_ID)
     val postStep = post[ChatArgs, ChatToolResponse](s"${name}_post", "llm/chat", obj(body), Auth()).flatMap(_.body)
-    val result = Try("decoded", List() -> obj(ChatJsonResponse(Value(CelFunc("json.decode", postStep.result.message.flatMap(_.content))), postStep.result.total_cost)))
+    val result = Try("decoded", List() -> obj(ChatJsonResponse(Value(json.decode( postStep.result.message.flatMap(_.content))), postStep.result.total_cost)))
     Block(s"${name}_block", List[Step[_, _]](spec, buildSchemaList, postStep, result) -> result.resultValue)
   }
 
@@ -101,7 +101,7 @@ object Llm {
     maxTokens: BaseValue[Int] = Value.nil,
   ): Step[ChatToolResponse, Value[ChatToolResponse]] = {
     val toolChoice = Switch("toolChoice", List(
-      ((tools.cel !== Cel.nil) && (CelFunc("len", tools) > 0)) ->  (List() -> tool_choice),
+      ((tools.cel !== Cel.nil) && (core.len( tools) > 0)) ->  (List() -> tool_choice),
       (true: Cel) -> (List() -> Value.nil[ToolChoice])
     ))
     val body = ChatArgs(messages, model, temperature, maxTokens, ResponseFormat("text"), sessionId, WORKFLOW_ID, tools, toolChoice.resultValue)

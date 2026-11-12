@@ -74,7 +74,7 @@ object Exec {
     Switch(
       name,
       List(
-        (CelFunc("len", CelFunc("default", callingExecId.cel, "")) > 0) -> {
+        (core.len( core.default( callingExecId.cel, "")) > 0) -> {
           Try(
             s"${name}Try",
             List(createExecLink) -> str("ok"),

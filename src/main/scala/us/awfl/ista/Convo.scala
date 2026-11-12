@@ -28,9 +28,8 @@ object ConvoSummary:
   given Yoj[ConvoSummary] = Yoj("summaries", "Summary of older conversation messages:\r")
 
 case class ToolCallFunction(name: Value[String], arguments: Value[String]) {
-  def arg(name: String): Value[String] = Value(CelFunc(
-    "map.get",
-    CelFunc("json.decode", arguments.cel),
+  def arg(name: String): Value[String] = Value(map.get(
+    json.decode( arguments.cel),
     name
   ))
 }

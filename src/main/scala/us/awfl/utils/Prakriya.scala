@@ -102,7 +102,7 @@ case class Ista[T: Spec](name: String, build: KalaVibhaga => Step[ChatMessage, L
     val writeStep: Post[Nothing] = kala match {
       case SegKala(sessionId, end, windowSeconds) =>
         // Create the child document, then update the parent session doc's updated_at
-        val newId = Try(s"${stepName}_newId", List() -> Value("uuid.generate()"))
+        val newId = Try(s"${stepName}_newId", List() -> Value(uuid.generate()))
         val createChild = create(s"${stepName}_write_${name}Ista_SegKala", convoCollection(sessionId), newId.resultValue, ts)
         val updateParent = update(
           s"${stepName}_update_session_update_time",
@@ -115,8 +115,8 @@ case class Ista[T: Spec](name: String, build: KalaVibhaga => Step[ChatMessage, L
           List[Step[_, _]](newId, createChild, updateParent) -> createChild.resultValue
         )
       case SessionKala(sessionId, sessionEnd) => update(s"${stepName}_write_${name}Ista", str(("log.sessions.": Cel) + name), sessionId, ts)
-      case WeekKala(weekEnd)                  => update(s"${stepName}_write_${name}Ista_WeekKala", str(("log.weekly.": Cel) + name), Value(CelFunc("time.format", weekEnd.cel, "America/New_York")), ts)
-      case TermKala(termBegin, termEnd)       => update(s"${stepName}_write_${name}Ista_TermKala", str(("log.terms.": Cel) + name), Value(CelFunc("time.format", termEnd, "America/New_York")), ts)
+      case WeekKala(weekEnd)                  => update(s"${stepName}_write_${name}Ista_WeekKala", str(("log.weekly.": Cel) + name), Value(time.format( weekEnd.cel, "America/New_York")), ts)
+      case TermKala(termBegin, termEnd)       => update(s"${stepName}_write_${name}Ista_TermKala", str(("log.terms.": Cel) + name), Value(time.format( termEnd, "America/New_York")), ts)
     }
     contents match {
       case Obj(value)      => writeStep
@@ -137,7 +137,7 @@ case class Ista[T: Spec](name: String, build: KalaVibhaga => Step[ChatMessage, L
       case TermKala(begin, end)                    => list(s"read_${name}Ista_QuaterKala", str(("log.terms.": Cel) + name), begin, end)
     }
     val forItems = For[ListItem[Timestamped[T]], Timestamped[T]](s"for_${name}Ista", results.resultValue.flatMap(_.documents)) { item =>
-      List(Log(s"log_${name}Ista_read", str(("Read items: ": Cel) + CelFunc("json.encode_to_string", item.cel)))) -> item.flatMap(_.data)
+      List(Log(s"log_${name}Ista_read", str(("Read items: ": Cel) + json.encode_to_string( item.cel)))) -> item.flatMap(_.data)
     }
     Block(s"${name}_readIstaBlock", List[Step[_, _]](log, results, forItems) -> forItems.resultValue)
   }
@@ -172,7 +172,7 @@ sealed trait KalaVibhaga {
 case class SegKala(sessionId: Value[String], end: Value[Double], windowSeconds: Value[Double]) extends KalaVibhaga {
   override def collection(name: String): Value[String] = str(("convo.sessions/": Cel) + sessionId.cel + "/" + name)
   override def *(times: Int): KalaVibhaga = SegKala(sessionId, end, Value(windowSeconds.cel * times))
-  override def log(name: String): Log = Log(name, str(("SegKala: ": Cel) + CelFunc("time.format", end.cel, "America/New_York")))
+  override def log(name: String): Log = Log(name, str(("SegKala: ": Cel) + time.format( end.cel, "America/New_York")))
 
   def session: SessionKala = SessionKala(sessionId, end)
 }
@@ -180,20 +180,20 @@ case class SegKala(sessionId: Value[String], end: Value[Double], windowSeconds: 
 case class SessionKala(sessionId: Value[String], sessionEnd: Value[Double]) extends KalaVibhaga {
   override def collection(name: String): Value[String] = str(("convo.sessions/": Cel) + sessionId.cel + "/" + name)
   override def *(times: Int): KalaVibhaga = this
-  override def log(name: String): Log = Log(name, str(("SessionKala: ": Cel) + CelFunc("time.format", sessionEnd.cel, "America/New_York")))
+  override def log(name: String): Log = Log(name, str(("SessionKala: ": Cel) + time.format( sessionEnd.cel, "America/New_York")))
   override val end: Value[Double] = sessionEnd
 }
 
 case class WeekKala(weekEnd: Value[Double]) extends KalaVibhaga {
   override def collection(name: String): Value[String] = str(("log.sessions.": Cel) + name)
   override def *(times: Int): KalaVibhaga = TermKala(Value(weekEnd.cel - 60 * 60 * 24 * 7 * times), weekEnd)
-  override def log(name: String): Log = Log(name, str(("WeekKala: ": Cel) + CelFunc("time.format", weekEnd.cel, "America/New_York")))
+  override def log(name: String): Log = Log(name, str(("WeekKala: ": Cel) + time.format( weekEnd.cel, "America/New_York")))
   override val end: Value[Double] = weekEnd
 }
 
 case class TermKala(termBegin: Value[Double], termEnd: Value[Double]) extends KalaVibhaga {
   override def collection(name: String): Value[String] = str(("log.weekly.": Cel) + name)
   override def *(times: Int): KalaVibhaga = TermKala(Value(termEnd.cel - ((termEnd.cel - termBegin.cel) * times)), termEnd)
-  override def log(name: String): Log = Log(name, str(("TermKala: ": Cel) + CelFunc("time.format", termEnd.cel, "America/New_York")))
+  override def log(name: String): Log = Log(name, str(("TermKala: ": Cel) + time.format( termEnd.cel, "America/New_York")))
   override val end: Value[Double] = termEnd
 }

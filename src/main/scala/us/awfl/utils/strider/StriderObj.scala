@@ -20,8 +20,8 @@ object StriderObj {
   val input = inputVal.get
   given Convo.SessionId = Convo.SessionId(Env.sessionId)
 
-  private val windowSeconds  = Value[Double](CelFunc("default", input.windowSeconds, Segments.DefaultWindowSeconds))
-  private val overlapSeconds = Value[Int](CelFunc("default", input.overlapSeconds, Segments.DefaultOverlapSeconds))
+  private val windowSeconds  = Value[Double](core.default( input.windowSeconds, Segments.DefaultWindowSeconds))
+  private val overlapSeconds = Value[Int](core.default( input.overlapSeconds, Segments.DefaultOverlapSeconds))
 
   val segments: Step[SegKala, ListValue[SegKala]] =
     Segments.forSession("segmentsForSession", Env.sessionId, windowSeconds, overlapSeconds)

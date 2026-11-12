@@ -35,7 +35,7 @@ trait All[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out]) extends
     )
     Call(
       s"${kalaName}_run",
-      "googleapis.workflowexecutions.v1.projects.locations.workflows.executions.run",
+      CallOperations.WorkflowRun,
       obj(args)
     )
   }
@@ -102,7 +102,7 @@ trait Latest[In, Out](val nameStr: String, windowSeconds: Int = us.awfl.utils.Se
     )
     Call(
       "All_Latest_run",
-      "googleapis.workflowexecutions.v1.projects.locations.workflows.executions.run",
+      CallOperations.WorkflowRun,
       obj(args)
     )
   }
@@ -131,7 +131,7 @@ trait Latest[In, Out](val nameStr: String, windowSeconds: Int = us.awfl.utils.Se
     )
     Call(
       stepName,
-      "googleapis.workflowexecutions.v1.projects.locations.workflows.executions.run",
+      CallOperations.WorkflowRun,
       obj(args)
     )
   }
@@ -154,7 +154,7 @@ trait Backfill[In, Out](val nameStr: String, val prompt: String)(using spec: Spe
     )
     Call(
       "All_Backfill_run",
-      "googleapis.workflowexecutions.v1.projects.locations.workflows.executions.run",
+      CallOperations.WorkflowRun,
       obj(args)
     )
   }
@@ -186,7 +186,7 @@ trait Backfill[In, Out](val nameStr: String, val prompt: String)(using spec: Spe
     )
     Call(
       "RunBackfill",
-      "googleapis.workflowexecutions.v1.projects.locations.workflows.executions.run",
+      CallOperations.WorkflowRun,
       obj(args)
     )
   }
