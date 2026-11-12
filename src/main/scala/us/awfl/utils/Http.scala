@@ -39,7 +39,7 @@ def postV[In, Out: Spec](name: String, urlPath: Value[String], body: BaseValue[I
     auth = auth,
     headers = headers(env)
   )
-  Call[PostRequest[In], PostResult[Out]](name, "http.post", obj(postArgs))
+  Call[PostRequest[In], PostResult[Out]](name, CallOperations.HttpPost, obj(postArgs))
 }
 
 def post[In, Out: Spec](name: String, relativePath: String, body: BaseValue[In], auth: Auth = Auth(), env: Env = Env.get): Post[Out] =
@@ -53,7 +53,7 @@ def getV[Out: Spec](name: String, urlPath: Value[String], auth: Auth = Auth(), e
     auth = auth,
     headers = headers(env)
   )
-  Call[GetRequest, PostResult[Out]](name, "http.get", obj(getArgs))
+  Call[GetRequest, PostResult[Out]](name, CallOperations.HttpGet, obj(getArgs))
 }
 
 def get[Out: Spec](name: String, relativePath: Value[String], auth: Auth = Auth(), env: Env = Env.get): Get[Out] =
@@ -71,7 +71,7 @@ def patchV[In, Out: Spec](name: String, urlPath: Value[String], body: BaseValue[
     auth = auth,
     headers = headers(env)
   )
-  Call[PostRequest[In], PostResult[Out]](name, "http.patch", obj(patchArgs))
+  Call[PostRequest[In], PostResult[Out]](name, CallOperations.HttpPatch, obj(patchArgs))
 }
 
 def patch[In, Out: Spec](name: String, relativePath: String, body: BaseValue[In], auth: Auth = Auth(), env: Env = Env.get): Patch[Out] =
@@ -84,5 +84,5 @@ def delete[Out: Spec](name: String, urlPath: Value[String], auth: Auth = Auth(),
     auth = auth,
     headers = headers(env)
   )
-  Call[GetRequest, PostResult[Out]](name, "http.delete", obj(getArgs))
+  Call[GetRequest, PostResult[Out]](name, CallOperations.HttpDelete, obj(getArgs))
 }
