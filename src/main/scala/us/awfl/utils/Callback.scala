@@ -53,7 +53,25 @@ object Callback {
     Block("initCallback", List[Step[?,?]](createCallback, saveCallback) -> saveCallback.resultValue)
   }
 
-  def apply[T: Spec](run: Callback[T] => Step[?, ?]): Step[T, Value[T]] = {
+  /**
+    * Await a callback that reports infrastructure failures with an `error` map.
+    * Such failures intentionally abort the workflow.
+    */
+  def apply[T: Spec](run: Callback[T] => Step[?, ?]): Step[T, Value[T]] =
+    await(run, raiseCallbackError = true)
+
+  /**
+    * Await an agent tool callback without interpreting its response payload.
+    * Tool failures (including an `error` map) are ordinary tool results and
+    * must reach the conversation; callback transport failures still throw.
+    */
+  def toolResult[T: Spec](run: Callback[T] => Step[?, ?]): Step[T, Value[T]] =
+    await(run, raiseCallbackError = false)
+
+  private def await[T: Spec](
+    run: Callback[T] => Step[?, ?],
+    raiseCallbackError: Boolean
+  ): Step[T, Value[T]] = {
     val createCallback = mkCreateCallback
     val saveCallback = mkSaveCallback[T](createCallback.resultValue)
     val runStep = run(saveCallback.result)
@@ -69,9 +87,13 @@ object Callback {
       (true: Cel) -> (List() -> body)
     ))
 
+    val steps: List[Step[?, ?]] =
+      List(createCallback, saveCallback, runStep, awaitCallback) ++
+        (if (raiseCallbackError) List(checkError) else Nil)
+
     Try(
       "createCallback_try",
-      List[Step[?,?]](createCallback, saveCallback, runStep, awaitCallback, checkError) -> body,
+      steps -> body,
       reRaise = true
     )
   }
