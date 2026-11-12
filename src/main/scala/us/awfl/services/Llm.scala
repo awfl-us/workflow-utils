@@ -75,7 +75,7 @@ object Llm {
     model: Value[String] = str("gpt-5"),
     temperature: Double = 0.8
   ): Step[ChatJsonResponse[T], Value[ChatJsonResponse[T]]] = {
-    val spec = Try("spec", List() -> str(SchemaExample[T]))
+    val spec = Try("spec", List() -> str(CelValue(obj(implicitly[Spec[T]].init(Resolver("example"))))))
     val schema = ChatMessage(
       role = "system",
       content = str(("Respond with a JSON in this format:\r": Cel) + spec.resultValue.cel)
