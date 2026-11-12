@@ -41,7 +41,7 @@ trait Strider[In, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[Out]) ext
 
   val strideStep = Convo.inSession[Out]("inSession", Env.sessionId) {
     val key = Locks.key(ista.name)
-    val owner: Value[String] = Value("uuid.generate()")
+    val owner: Value[String] = Value(uuid.generate())
     val acquired = Locks.acquireBool("lock_acquire", key, owner, 300)
 
     val messagesInWindow = summon[Yoj[ChatMessage]].build(using StriderObj.segmentKala)

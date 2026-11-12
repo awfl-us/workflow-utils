@@ -28,7 +28,7 @@ trait ConvoStrider[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out]
     )
     val call: Post[Nothing] = Call(
       stepName,
-      "googleapis.workflowexecutions.v1.projects.locations.workflows.executions.run",
+      CallOperations.WorkflowRun,
       obj(args)
     )
 

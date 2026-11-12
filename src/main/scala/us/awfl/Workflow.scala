@@ -57,6 +57,6 @@ trait Workflow {
   def execute[In, Out: Spec](wfName: String, input: BaseValue[In]): Call[RunWorkflowArgs[In], Out] = {
     val args = RunWorkflowArgs(str(s"${wfName}$${WORKFLOW_ENV}"), input)
     val cleanName = wfName.replace('-', '_')
-    Call(cleanName, "googleapis.workflowexecutions.v1.projects.locations.workflows.executions.run", obj(args))
+    Call(cleanName, CallOperations.WorkflowRun, obj(args))
   }
 }

@@ -35,7 +35,7 @@ object Callback {
 
   def mkCreateCallback = Call[CreateCallbackArgs, CallbackDetails](
     s"createCallback",
-    "events.create_callback_endpoint",
+    CallOperations.CallbackCreate,
     obj(CreateCallbackArgs(str("POST")))
   )
 
@@ -77,13 +77,13 @@ object Callback {
     val runStep = run(saveCallback.result)
     val awaitCallback = Call[AwaitCallbackArgs, CallbackRequest[T]](
       s"awaitCallback",
-      "events.await_callback",
+      CallOperations.CallbackAwait,
       obj(AwaitCallbackArgs(createCallback.resultValue, obj(3600)))
     )
     val body = awaitCallback.resultValue.flatMap(_.http_request).flatMap(_.body)
     val checkError = Switch("checkError", List(
-      (("error" in body) && (CelFunc("get_type", CelFunc("map.get", body, "error")) === "map")) ->
-        (List(Raise("raise", Value[Error](CelFunc("map.get", body, "error")))) -> Value.nil),
+      (("error" in body) && (core.get_type( map.get( body, "error")) === "map")) ->
+        (List(Raise("raise", Value[Error](map.get( body, "error")))) -> Value.nil),
       (true: Cel) -> (List() -> body)
     ))
 

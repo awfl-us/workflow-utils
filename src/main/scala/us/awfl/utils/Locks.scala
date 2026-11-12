@@ -18,7 +18,7 @@ object Locks {
   def key(familyName: String)(using k: KalaVibhaga): Key = {
     val base = s"locks.${familyName}.${Yoj.kalaName}"
     val collection = str(base)
-    val endStr: Value[String] = Value(CelFunc("string", k.end.cel))
+    val endStr: Value[String] = Value(core.string( k.end.cel))
     k match {
       case SegKala(sessionId, _, _) =>
         Key(collection, str(sessionId.cel + (":": Cel) + endStr.cel))
