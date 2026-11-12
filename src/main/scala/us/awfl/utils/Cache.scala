@@ -31,7 +31,7 @@ case class Cache(collection: Value[String]) {
     val readStep = Firebase.read[CachedValue[T]](s"${name}Read", collection, id)
     val readBody = readStep.resultValue.flatMap(_.body)
 
-    val nowField = CelConst("sys.now()")
+    val nowField = time.now()
 
     val updateStep = Firebase.update(
       name = s"${name}Write",
@@ -39,7 +39,7 @@ case class Cache(collection: Value[String]) {
       id = id,
       contents = obj(CachedValueWrite(
         result = step.resultValue,
-        updatedAt = Value(nowField.value)
+        updatedAt = Value(nowField)
       ))
     )
 

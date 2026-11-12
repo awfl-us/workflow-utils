@@ -41,7 +41,7 @@ case class ChatMessage(
   content: Value[String],
   tool_calls: ListValue[ToolCall] = ListValue.empty,
   tool_call_id: Value[String] = Value("null"),
-  create_time: Value[Double] = Value("sys.now()"),
+  create_time: Value[Double] = Value(time.now()),
   // When includeDocId=true on TopicContextYoj, messages sourced from Firestore may include docId.
   // Use Value("null") to omit when not provided.
   docId: Value[String] = Value("null")

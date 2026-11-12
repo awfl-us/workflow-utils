@@ -27,7 +27,7 @@ object Exec {
     status: Value[String],
     ended: BaseValue[Boolean],
     workflow: Value[String] = WORKFLOW_ID,
-    updated: BaseValue[Double] = Value("sys.now()"),
+    updated: BaseValue[Double] = Value(time.now()),
     error: Value[String] = Value.nil
   )
 
@@ -50,7 +50,7 @@ object Exec {
       callingExec = callingExecId,
       triggeredExec = triggeredExecId,
       sessionId = Env.sessionId,
-      created = Value("sys.now()")
+      created = Value(time.now())
     ))
 
     // Use a composite id per child to avoid overwrites when one caller triggers multiple children
@@ -102,7 +102,7 @@ object Exec {
     val payload = obj(ExecRegistration(
       sessionId = Env.sessionId,
       execId = execId,
-      created = Value("sys.now()")
+      created = Value(time.now())
     ))
 
     val create = us.awfl.services.Firebase.create(s"${name}Create", collection, id = docId, contents = payload)
@@ -133,7 +133,7 @@ object Exec {
     us.awfl.utils.post[StatusUpdate, NoValueT](
       name,
       "workflows/exec/status/update",
-      obj(StatusUpdate(execId, status, ended, workflow, Value("sys.now()"), error))
+      obj(StatusUpdate(execId, status, ended, workflow, Value(time.now()), error))
     )
   }
 
