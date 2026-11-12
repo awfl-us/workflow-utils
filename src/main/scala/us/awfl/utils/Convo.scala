@@ -15,7 +15,7 @@ import us.awfl.services.Llm.ToolChoice
 
 object Convo {
   def addMessage(name: String, message: BaseValue[ChatMessage], cost: Value[Double] = Value.nil)(using ista: Ista[ChatMessage], kala: KalaVibhaga): Post[Nothing] = {
-    ista.write(name, message, Value("sys.now()"), cost)
+    ista.write(name, message, Value(time.now()), cost)
   }
 
   val emptyYoj = Raise("emptyYoj", obj(Error(str("Empty Yoj returned"), OptValue[Int](400))))

@@ -63,7 +63,7 @@ object Events {
     error: Value[String] = Value.nil,
   ): Step[NoValueT, BaseValue[NoValueT]] = {
     val opEnvelopeField = OperationEnvelope(
-      create_time = Value("sys.now()"),
+      create_time = Value(time.now()),
       callback_id = callback_id,
       content = content,
       tool_call = toolCall,
