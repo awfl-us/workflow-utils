@@ -61,7 +61,7 @@ trait Strider[In, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[Out]) ext
     )
 
     val doWriteSeg: Step[Out, BaseValue[Out]] = {
-      val newId        = Try("ista_write_newId", List() -> Value[String]("uuid.generate()"))
+      val newId        = Try("ista_write_newId", List() -> Value[String](uuid.generate()))
       val payload      = obj(us.awfl.utils.Timestamped(complete.result.result, StriderObj.segmentKala.end, complete.result.total_cost))
       val createChild  = create("ista_write_create_child", ista.convoCollection(Env.sessionId), newId.resultValue, payload)
       val updateParent = update(
