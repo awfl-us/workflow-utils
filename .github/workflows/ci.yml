@@ -1,0 +1,16 @@
+name: Workflow utility source regression
+on:
+  push:
+  pull_request:
+jobs:
+  scala:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: sbt/setup-sbt@v1
+      - name: Compile and validate typed schema example and 404 recovery
+        run: sbt -batch 'Test / runMain us.awfl.utils.SchemaExampleSmoke'
