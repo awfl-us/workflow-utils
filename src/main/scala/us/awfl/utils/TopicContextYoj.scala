@@ -43,7 +43,10 @@ object TopicContextYoj {
     intro: Option[Intro],
     promoteUpstream: Boolean,
     components: ListValue[ComponentSpec],
-    filters: ListValue[FilterSpec]
+    filters: ListValue[FilterSpec],
+    // Provider model, distinct from this context-composition model. Used to
+    // select model-specific size limits on the server.
+    llmModel: Value[String] = Value.nil
   )
 
   private def encodeKala(k: KalaVibhaga): BaseValue[Ctx.Kala] = k match {

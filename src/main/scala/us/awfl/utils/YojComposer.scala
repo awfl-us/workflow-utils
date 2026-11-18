@@ -14,7 +14,8 @@ object YojComposer {
     childComponents: List[TopicContextYoj.ComponentSpec],
     intro: Option[String] = None,
     promoteUpstream: Boolean = true,
-    filters: ListValue[TopicContextYoj.FilterSpec] = ListValue.empty[TopicContextYoj.FilterSpec]
+    filters: ListValue[TopicContextYoj.FilterSpec] = ListValue.empty[TopicContextYoj.FilterSpec],
+    llmModel: Value[String] = Value.nil
   )(using kala: KalaVibhaga): Step[ChatMessage, ListValue[ChatMessage]] = {
     
     val spec: TopicContextYoj.ComponentSpec =
@@ -36,7 +37,8 @@ object YojComposer {
           intro = intro.map(s => TopicContextYoj.Intro(system = Some(s))),
           promoteUpstream = promoteUpstream,
           components = components.resultValue,
-          filters = filters
+          filters = filters,
+          llmModel = llmModel
         )
       )
     )
