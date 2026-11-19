@@ -94,7 +94,15 @@ object Yoj:
 // इष्टः — यः अभिलषितः अर्थः। 
 // प्रयोजनदृष्ट्या अपेक्षितः परिणामः। 
 // उदाहरणतः, यं विषयं प्राप्तुं वाञ्छति प्रणेता, स इष्टः।
-case class Ista[T: Spec](name: String, build: KalaVibhaga => Step[ChatMessage, ListValue[ChatMessage]]) {
+case class Ista[T: Spec](
+  name: String,
+  build: KalaVibhaga => Step[ChatMessage, ListValue[ChatMessage]],
+  description: KalaVibhaga => String = _ => ""
+) {
+  /** Model-facing tool schema derived from T; workflow identity is not exposed. */
+  inline def tool(kala: KalaVibhaga): us.awfl.services.Llm.Tool =
+    JsonSchema.nativeTool[T](name, description(kala))
+
   def convoCollection(sessionId: Value[String]) = str(("convo.sessions/": Cel) + sessionId.cel + "/" + name)
 
   def write(stepName: String, contents: BaseValue[T], at: Value[Double], cost: Value[Double])(using kala: KalaVibhaga): Post[Nothing] = {
