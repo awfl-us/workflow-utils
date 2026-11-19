@@ -48,7 +48,8 @@ object Llm {
     sessionId: Value[String],
     workflow_name: Value[String],
     tools: ListValue[Tool] = ListValue.empty,
-    tool_choice: BaseValue[ToolChoice] = ToolChoice.auto
+    tool_choice: BaseValue[ToolChoice] = ToolChoice.auto,
+    validate_tool_arguments: Boolean = false
   )
 
   // Server returns { result, usage, total_cost }
@@ -107,7 +108,9 @@ object Llm {
       ((tools.cel !== Cel.nil) && (core.len( tools) > 0)) ->  (List() -> tool_choice),
       (true: Cel) -> (List() -> Value.nil[ToolChoice])
     ))
-    val body = ChatArgs(messages, model, temperature, maxTokens, ResponseFormat("text"), sessionId, WORKFLOW_ID, tools, toolChoice.resultValue)
+    // Tool-enabled calls opt into server-side JSON Schema validation. Normal
+    // text/JSON completions retain the previous default without tool checks.
+    val body = ChatArgs(messages, model, temperature, maxTokens, ResponseFormat("text"), sessionId, WORKFLOW_ID, tools, toolChoice.resultValue, true)
     val request = post[ChatArgs, ChatToolResponse](name, "llm/chat", obj(body), Auth()).flatMap(_.body)
     Block("chatBlock", List[Step[_, _]](toolChoice, request) -> request.resultValue)
   }
