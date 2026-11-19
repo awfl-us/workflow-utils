@@ -33,7 +33,9 @@ ThisBuild / version ~= { v =>
 
 // Dependencies
 libraryDependencies ++= Seq(
-  "us.awfl" %% "dsl" % "0.3.3"
+  "us.awfl" %% "dsl" % "0.3.3",
+  // Test dependencies
+  "org.scalatest" %% "scalatest" % "3.2.19" % Test
 )
 
 dependencyOverrides += "us.awfl" %% "dsl" % "0.1.0-SNAPSHOT"

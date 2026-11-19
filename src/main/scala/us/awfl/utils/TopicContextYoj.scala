@@ -53,6 +53,13 @@ object TopicContextYoj {
     case term: TermKala    => Ctx.termKala(term.termBegin, term.end)
   }
 
+  def encodeKalaVal(k: Value[KalaVibhaga]): Step[Ctx.Kala, Value[Ctx.Kala]] = Match("encodeKalaVal", k) {
+    case seg: SegKala      => List() -> obj(Ctx.segKala(seg.sessionId, seg.end, seg.windowSeconds))
+    case sesh: SessionKala => List() -> obj(Ctx.sessionKala(sesh.sessionId, sesh.end))
+    case week: WeekKala    => List() -> obj(Ctx.weekKala(week.end))
+    case term: TermKala    => List() -> obj(Ctx.termKala(term.termBegin, term.end))
+  }
+
   case class TopicArgs(
     kala: BaseValue[Ctx.Kala],
     presetId: Value[String] = Value("null"),

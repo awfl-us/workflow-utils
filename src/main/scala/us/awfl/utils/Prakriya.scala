@@ -81,6 +81,7 @@ object Yoj:
           )
         )
 
+        // val encodeKala = TopicContextYoj.encodeKalaVal(kala)
         val call = TopicContextYoj.runWithModel(model.resultValue, obj(kala))
         val items = For[ChatMessage, ChatMessage](
           s"for_${name}_items",
@@ -98,7 +99,7 @@ object Yoj:
 case class Ista[T: Spec](
   name: String,
   description: KalaVibhaga => String,
-  tool: KalaVibhaga => Option[BaseValue[Llm.Tool]]
+  tool: KalaVibhaga => Option[Obj[Llm.Tool]]
 ) {
   def convoCollection(sessionId: Value[String]) = str(("convo.sessions/": Cel) + sessionId.cel + "/" + name)
 
@@ -141,6 +142,13 @@ case class Ista[T: Spec](
       case WeekKala(weekEnd)                       => list(s"read_${name}Ista_WeekKala", str(("log.weekly.": Cel) + name), Value(weekEnd.cel - 60 * 60 * 24 * 7), weekEnd)
       case TermKala(begin, end)                    => list(s"read_${name}Ista_QuaterKala", str(("log.terms.": Cel) + name), begin, end)
     }
+    // val kalaVal = Try("kalaVal", List() -> obj(kala))
+    // val results = Match("matchKala", kalaVal.resultValue) {
+    //   case SegKala(sessionId, end, windowSeconds) => list(s"read_${name}Ista_convoSegKala", convoCollection(sessionId), Value(end.cel - windowSeconds.cel), end).fn
+    //   case SessionKala(sessionId, sessionEnd)     => list(s"read_${name}Ista_SessionKala", str(("log.sessions.": Cel) + name), Value(0), sessionEnd).fn
+    //   case WeekKala(weekEnd)                      => list(s"read_${name}Ista_WeekKala", str(("log.weekly.": Cel) + name), Value(weekEnd.cel - 60 * 60 * 24 * 7), weekEnd).fn
+    //   case TermKala(begin, end)                   => list(s"read_${name}Ista_QuaterKala", str(("log.terms.": Cel) + name), begin, end).fn
+    // }
     val forItems = For[ListItem[Timestamped[T]], Timestamped[T]](s"for_${name}Ista", results.resultValue.flatMap(_.documents)) { item =>
       List(Log(s"log_${name}Ista_read", str(("Read items: ": Cel) + CelFunc("json.encode_to_string", item.cel)))) -> item.flatMap(_.data)
     }
@@ -149,21 +157,23 @@ case class Ista[T: Spec](
 }
 
 object Ista {
-  def apply[T: Spec](name: String)(description: KalaVibhaga => String): Ista[T] = {
-    def tool(kala: KalaVibhaga) = {
-      given KalaVibhaga = kala
-      Some(obj(Llm.Tool(
-        function = obj(ToolFunctionDef(
-          name = str(name),
-          description = str(description(kala)),
-          parameters = Value[Llm.ToolDefProperty](CelStr(JsonSchema.documentJsonWithKala[T]()))
-        ))
-      )))
-    }
-    Ista(name, description, tool)
+  inline def apply[T: Spec](name: String)(description: KalaVibhaga => String): Ista[T] = {
+    Ista(name, description, tool[T](name, description))
   }
 
-  def nil[T: Spec]: Ista[T] = Ista("nil", _ => "nil", _ => None)
+  def nil[T: Spec](name: String): Ista[T] = Ista(name, _ => "nil", _ => None)
+
+  private inline def tool[T](name: String, description: KalaVibhaga => String)(kala: KalaVibhaga) = {
+    given KalaVibhaga = kala
+
+    Some(obj(Llm.Tool(
+      function = obj(ToolFunctionDef(
+        name = str(name),
+        description = str(description(kala)),
+        parameters = obj(JsonSchema.toolDefPropertyWithKala[T])
+      ))
+    )))
+  }
 }
 // Iṣṭaḥ — "That which is desired or intended."
 // A target or goal that the system wishes to extract or realize from context.
@@ -171,7 +181,7 @@ object Ista {
 // कालविभागः — समयस्य विभागः, त्रैकालिकविभाजनम्। 
 // संवादी प्रक्रमायाः कालपरिमाणनुसारं विभागः। 
 // उदाहरणतः, खण्डः (Segment), सत्यम् (Session), त्रिमासिकम् (Quarter) इत्यादयः।
-sealed trait KalaVibhaga {
+sealed trait KalaVibhaga extends IsAdt {
   def collection(name: String): Value[String]
   def *(times: Int): KalaVibhaga
   def log(name: String): Log

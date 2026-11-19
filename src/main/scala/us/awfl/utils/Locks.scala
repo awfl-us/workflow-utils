@@ -37,17 +37,17 @@ object Locks {
   // Structure:
   //  - Collection: locks.{familyName}.Session
   //  - Doc ID: {sessionId}
-  def sessionKey(familyName: String)(using k: KalaVibhaga): Key = {
+  def buildSessionKey(familyName: String, k: Value[KalaVibhaga]): Step[Key, Value[Key]] = {
     val collection = str(s"locks.${familyName}.Session")
-    val id: Value[String] = k match {
-      case SegKala(sessionId, _, _) => sessionId
-      case SessionKala(sessionId, _) => sessionId
+    val matchId = Match("matchId", k) {
+      case SegKala(sessionId, _, _) => List() -> sessionId
+      case SessionKala(sessionId, _) => List() -> sessionId
       // For non-session contexts, fall back to a stable key to avoid NPEs; ideally
       // callers of sessionKey should provide a session-bearing KalaVibhaga.
-      case WeekKala(_) => str("global")
-      case TermKala(_, _) => str("global")
+      case WeekKala(_) => List() -> str("global")
+      case TermKala(_, _) => List() -> str("global")
     }
-    Key(collection, id)
+    Try("sessionKeyTry", List(matchId) -> obj(Key(collection, matchId.resultValue)))
   }
 
   // Acquire the lock with TTL; return acquired=true/false, mapping 409 to false.

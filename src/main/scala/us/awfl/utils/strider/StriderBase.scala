@@ -41,7 +41,7 @@ trait Strider[In, Params, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[O
 
   val yojWorkflowName = s"${Yoj.kalaName}-Yoj"
 
-  protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: BaseValue[Out], at: Value[Double]): List[Step[?, ?]] = List()
+  protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]): List[Step[?, ?]] = List()
 
   val strideStep = Block("inSession", {
     val key = Locks.key(ista.name)

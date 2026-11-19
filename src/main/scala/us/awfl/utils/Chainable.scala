@@ -3,7 +3,7 @@ package us.awfl.utils
 import us.awfl.dsl._
 import us.awfl.core
 
-case class ChainableInput[T, P](input: BaseValue[T], params: BaseValue[P], env: BaseValue[Env] = ENV)
+case class ChainableInput[T, P](input: OptValue[T], params: BaseValue[P], env: BaseValue[Env] = ENV)
 
 case class Chain[Out](input: BaseValue[?], init: List[(BaseValue[?], core.Workflow)], lastParams: BaseValue[?], lastWorkflow: core.Workflow)(using eq: lastWorkflow.Result =:= Out) {
   def andThen[T]

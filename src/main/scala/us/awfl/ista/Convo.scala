@@ -52,6 +52,6 @@ case class ChatMessage(
 object ChatMessage:
   def apply(role: String, content: Value[String]): ChatMessage = ChatMessage(str(role), content)
 
-  given Ista[ChatMessage] = Ista.nil
+  given Ista[ChatMessage] = Ista.nil("messages")
 
   given Yoj[ChatMessage] = Yoj("messages", "")

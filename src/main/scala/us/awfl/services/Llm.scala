@@ -28,7 +28,7 @@ object Llm {
   case class ToolWithWorkflow(
     `type`: Value[String] = str("function"),
     function: BaseValue[Llm.ToolFunctionDef],
-    workflowName: Value[String]
+    workflowName: OptValue[String]
   )
 
   sealed trait ToolChoice

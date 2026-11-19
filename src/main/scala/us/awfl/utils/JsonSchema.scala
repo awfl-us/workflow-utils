@@ -5,9 +5,14 @@ import scala.compiletime.{erasedValue, constValue, summonInline, summonFrom}
 
 // AWFL DSL wrappers support
 import us.awfl.dsl.{BaseValue as DslBaseValue, Value as DslValue, ListValue as DslListValue, Obj as DslObj, OptBase as DslOptBase, OptList as DslOptList}
+import us.awfl.dsl.CelOps._ // for List(...).cel to build CEL list literals
+import us.awfl.dsl.auto.given
 
 // Kala/Ista for contextual descriptions (required)
 import us.awfl.utils.{Ista, KalaVibhaga}
+
+// LLM tool-def model
+import us.awfl.services.Llm
 
 /**
  * JSON Schema derivation (draft 2020-12 style) that REQUIRES a contextual KalaVibhaga and
@@ -136,7 +141,7 @@ object JsonSchema:
     summonFrom {
       case m: Mirror.ProductOf[T] => maybeDescribe[T](deriveProductWithKala[T](using m, kala))
       case m: Mirror.SumOf[T]     => maybeDescribe[T](deriveSumWithKala[T](using m, kala))
-      case _                      => maybeDescribe[T](StringSchema())
+      case _                      => sys.error("Couldn't derive json schema for erased type")
     }
 
   private inline def deriveProductWithKala[T](using m: Mirror.ProductOf[T], kala: KalaVibhaga): Schema =
@@ -262,5 +267,45 @@ object JsonSchema:
 
   inline def documentJsonWithKala[T](pretty: Boolean = true)(using kala: KalaVibhaga): String =
     Json.render(documentForWithKala[T], pretty)
+
+  // ----- LLM ToolDefProperty builders -----
+  /** Convert the derived schema to an LLM ToolDefProperty (subset compatible with function parameters). */
+  private def toToolDef(schema: Schema): Llm.ToolDefProperty = schema match
+    case Described(inner, _) => toToolDef(inner)
+    case ObjectSchema(props, required, _, _, _) =>
+      val p = props.view.mapValues(toToolDef).toMap
+      val req = if required.nonEmpty then us.awfl.dsl.OptList[String](required.cel) else us.awfl.dsl.OptList.nil[String]
+      Llm.ToolDefProperty(
+        `type` = "object",
+        properties = p,
+        required = req
+      )
+    case ArraySchema(items) =>
+      val i = Some(toToolDef(items).toMap)
+      Llm.ToolDefProperty(
+        `type` = "array",
+        items = i
+      )
+    case StringSchema(_, enumm) =>
+      val en = enumm.map(vals => us.awfl.dsl.OptList[String](vals.cel)).getOrElse(us.awfl.dsl.OptList.nil[String])
+      Llm.ToolDefProperty(
+        `type` = "string",
+        `enum` = en
+      )
+    case BooleanSchema() => Llm.ToolDefProperty("boolean")
+    case IntegerSchema() => Llm.ToolDefProperty("integer")
+    case NumberSchema()  => Llm.ToolDefProperty("number")
+    case NullSchema()    => Llm.ToolDefProperty("null")
+    case OneOfSchema(variants) =>
+      // Prefer the first non-null variant to keep parameters concise (matches Option[T] top-level)
+      variants.collectFirst { case s if !s.isInstanceOf[NullSchema] => toToolDef(s) }
+        .getOrElse(Llm.ToolDefProperty("null"))
+    case MapSchema(values) =>
+      // No additionalProperties support in ToolDefProperty; fall back to empty object
+      Llm.ToolDefProperty("object")
+
+  /** Build an LLM ToolDefProperty for T using the contextual Kala/Ista information. */
+  inline def toolDefPropertyWithKala[T](using kala: KalaVibhaga): Llm.ToolDefProperty =
+    toToolDef(deriveWithKala[T])
 
 end JsonSchema

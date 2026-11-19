@@ -29,7 +29,8 @@ trait All[In, Params, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out],
 
   def prompt: String
 
-  protected def childPostWriteSteps(sessionId: Value[String], responseId: Value[String], response: BaseValue[Out], at: Value[Double]): List[Step[?, ?]] = List()
+  // Updated to use Value[Out] to match base signature
+  protected def childPostWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]): List[Step[?, ?]] = List()
 
   def run(kalaName: String): Call[RunWorkflowArgs[StriderInput[Params]], Out] = {
     val args = RunWorkflowArgs(
@@ -62,10 +63,11 @@ trait All[In, Params, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out],
     )
   }
 
-  private lazy val convo   = new ConvoStrider[In, Params, Out]   { override val name = name; override def prompt = self.prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: BaseValue[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
-  private lazy val session = new SessionStrider[In, Params, Out] { override val name = name; override def prompt = self.prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: BaseValue[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
-  private lazy val week    = new WeekStrider[In, Params, Out]    { override val name = name; override def prompt = self.prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: BaseValue[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
-  private lazy val term    = new TermStrider[In, Params, Out]    { override val name = name; override def prompt = self.prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: BaseValue[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
+  // Updated overrides to use Value[Out]
+  private lazy val convo   = new ConvoStrider[In, Params, Out]   { override val name = name; override def prompt = self.prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
+  private lazy val session = new SessionStrider[In, Params, Out] { override val name = name; override def prompt = self.prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
+  private lazy val week    = new WeekStrider[In, Params, Out]    { override val name = name; override def prompt = self.prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
+  private lazy val term    = new TermStrider[In, Params, Out]    { override val name = name; override def prompt = self.prompt; override protected def postWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = childPostWriteSteps(sessionId, responseId, response, at) }
 
   private def convoWf: List[Workflow[?]]   = convo.workflows.map(_.copy(name   = Some("Convo")))
   private def sessionWf: List[Workflow[?]] = session.workflows.map(_.copy(name = Some("Session")))
@@ -73,7 +75,7 @@ trait All[In, Params, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out],
   private def termWf: List[Workflow[?]]    = term.workflows.map(_.copy(name    = Some("Term")))
 
   private def backfillWf: Workflow[Out]      = new Backfill[In, Params, Out](name, prompt) {
-    override protected def childPostWriteSteps(sessionId: Value[String], responseId: Value[String], response: BaseValue[Out], at: Value[Double]) = All.this.childPostWriteSteps(sessionId, responseId, response, at)
+    override protected def childPostWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]) = All.this.childPostWriteSteps(sessionId, responseId, response, at)
   }.workflow
 
   override def workflows: List[Workflow[?]] =
@@ -91,9 +93,11 @@ trait Latest[In, Params, Out](val nameStr: String, windowSeconds: Int = us.awfl.
 
   def prompt: String
 
-  protected def onPostWrite(sessionId: Value[String], responseId: Value[String], response: BaseValue[Out], at: Value[Double]): List[Step[?, ?]] = List()
+  // Updated to use Value[Out]
+  protected def onPostWrite(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]): List[Step[?, ?]] = List()
 
-  override protected def childPostWriteSteps(sessionId: Value[String], responseId: Value[String], response: BaseValue[Out], at: Value[Double]): List[Step[?, ?]] =
+  // Updated to use Value[Out]
+  override protected def childPostWriteSteps(sessionId: Value[String], responseId: Value[String], response: Value[Out], at: Value[Double]): List[Step[?, ?]] =
     onPostWrite(sessionId, responseId, response, at)
 
   private def latestEnd: Value[Double] = segment.flatMap(_.end)
