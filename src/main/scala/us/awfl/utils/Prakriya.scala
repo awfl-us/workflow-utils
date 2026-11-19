@@ -166,13 +166,14 @@ sealed trait KalaVibhaga {
   def week: WeekKala = {
     val original = 259200: Cel
     val weekSeconds: Cel = 7 * 24 * 60 * 60
-    val n = (end.cel - original) `//` weekSeconds
+    val n = core.int(end.cel - original) `//` weekSeconds
     WeekKala(Value(original + ((n + 1) * weekSeconds)))
   }
   def term: TermKala = {
     val original = 0: Cel
     val quarterSeconds: Cel = 365.230769 * 24 * 60 * 60 / 4
-    val n = ((end.cel - original) `//` quarterSeconds)
+    val micros: Cel = 1000000
+    val n = core.int((end.cel - original) * micros) `//` core.int(quarterSeconds * micros)
     TermKala(Value(original + (n * quarterSeconds)), Value(original + ((n + 1) * quarterSeconds)))
   }
 }
