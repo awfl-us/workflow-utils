@@ -21,7 +21,10 @@ object Llm {
     def toMap: Map[String, ?] = Map("type" -> `type`, "properties" -> properties, "enum" -> `enum`, "required" -> required, "items" -> items)
   }
   
-  case class ToolFunctionDef(name: Value[String], description: Value[String], parameters: BaseValue[ToolDefProperty])
+  // The wire schema is a JSON object, not necessarily the old ToolDefProperty.
+  // Accept the typed JsonSchema AST lowered to a structured Map at the boundary,
+  // while retaining all existing ToolDefProperty call sites unchanged.
+  case class ToolFunctionDef(name: Value[String], description: Value[String], parameters: BaseValue[?])
   case class Tool(`type`: Value[String] = str("function"), function: BaseValue[ToolFunctionDef])
 
   sealed trait ToolChoice
