@@ -2,7 +2,10 @@ package us.awfl.utils
 
 import scala.compiletime.{constValue, erasedValue, error, summonFrom}
 import scala.deriving.Mirror
-import us.awfl.dsl.{BaseValue, Value, ListValue, Obj, OptBase, OptList}
+import us.awfl.dsl.*
+import us.awfl.dsl.CelOps.*
+import us.awfl.dsl.auto.given
+import us.awfl.services.Llm
 
 /** In-memory JSON Schema derivation for AWFL model-facing tool arguments.
   *
@@ -98,3 +101,44 @@ object JsonSchema:
 
   inline def document[T]: Map[String, Any] =
     Map("$schema" -> "https://json-schema.org/draft/2020-12/schema") ++ derive[T].toJsonValue
+
+  /** Exact model-facing function schema. Never include routing metadata here. */
+  case class ModelFunction(name: String, description: String, parameters: Map[String, Any]):
+    def toJsonValue: Map[String, Any] = Map(
+      "type" -> "function",
+      "function" -> Map("name" -> name, "description" -> description,
+                        "parameters" -> parameters)
+    )
+
+  /** A separate server-side mapping; `workflowName` must never be passed to the model. */
+  case class RoutedTool(function: ModelFunction, workflowName: String):
+    def toModelJsonValue: Map[String, Any] = function.toJsonValue
+
+  inline def function[T](name: String, description: String): ModelFunction =
+    val parameters = derive[T].toJsonValue
+    require(parameters.get("type").contains("object"), "Tool parameters must be a JSON object schema")
+    ModelFunction(name, description, parameters)
+
+  /** Pull contextual text from the existing Ista while deriving schema at the call site. */
+  inline def functionForIsta[T: Spec](ista: Ista[T])(using kala: KalaVibhaga): ModelFunction =
+    function[T](ista.name, ista.description(kala))
+
+  /** Converts ONLY exactly representable schema nodes into the legacy Llm.ToolDefProperty.
+    * Legacy properties cannot encode `oneOf`, nullability or typed map values.
+    * Returning a weaker schema here would let model arguments escape validation.
+    */
+  def legacyProperty(schema: Schema): Llm.ToolDefProperty = schema match
+    // The legacy shape has no `additionalProperties` field: even a plain
+    // case-class object would lose its additionalProperties=false constraint.
+    // Never silently downgrade it to a permissive object.
+    case ArraySchema(items) => Llm.ToolDefProperty(
+      `type` = "array", items = Some(legacyProperty(items).toMap)
+    )
+    case PrimitiveSchema(kind) if kind != "null" => Llm.ToolDefProperty(kind)
+    case other => throw new IllegalArgumentException(
+      s"Llm.ToolDefProperty cannot encode ${other.getClass.getSimpleName} losslessly; use ModelFunction.toJsonValue")
+
+  /** New model-facing tool objects use `function`; the legacy property
+    * converter is restricted to scalar and array nodes until the older LLM
+    * class is upgraded to represent strict JSON Schema objects and unions.
+    */
