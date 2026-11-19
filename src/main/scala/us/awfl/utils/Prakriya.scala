@@ -99,6 +99,10 @@ case class Ista[T: Spec](
   build: KalaVibhaga => Step[ChatMessage, ListValue[ChatMessage]],
   description: KalaVibhaga => String = _ => ""
 ) {
+  /** Model-facing tool schema derived from T; workflow identity is not exposed. */
+  inline def tool(kala: KalaVibhaga): us.awfl.services.Llm.Tool =
+    JsonSchema.nativeTool[T](name, description(kala))
+
   def convoCollection(sessionId: Value[String]) = str(("convo.sessions/": Cel) + sessionId.cel + "/" + name)
 
   def write(stepName: String, contents: BaseValue[T], at: Value[Double], cost: Value[Double])(using kala: KalaVibhaga): Post[Nothing] = {
