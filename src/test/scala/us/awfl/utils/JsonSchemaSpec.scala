@@ -86,4 +86,28 @@ object JsonSchemaSpec:
         false
       catch case _: IllegalArgumentException => true
       assert(fails, s"Legacy adapter silently downgraded $schema")
-    println("AWFL_JSON_SCHEMA_PASS primitives/DSL wrappers/options/maps/sums/contextual/legacy-fail-closed")
+    val native = JsonSchema.nativeTool[ToolArgs]("READ_TYPED", "Typed file reader")
+    native.function match
+      case Obj(params) => params.parameters match
+        case Obj(schema: Map[?, ?]) => assert(schema == JsonSchema.derive[ToolArgs].toJsonValue)
+        case _ => assert(false, "Expected structured typed schema map")
+      case _ => assert(false, "Expected an in-memory tool function")
+    val nativeContextual = contextual.tool(kala)
+    nativeContextual.function match
+      case Obj(params) => params.parameters match
+        case Obj(schema: Map[?, ?]) => assert(schema == JsonSchema.derive[ConvoSummary].toJsonValue)
+        case _ => assert(false, "Expected structured typed contextual schema map")
+      case _ => assert(false, "Expected an in-memory contextual tool function")
+    val encoded = JsonSchemaCodec.function(modelTool)
+    assert(encoded == JsonSchemaCodec.render(modelTool.toJsonValue))
+    assert(encoded == JsonSchemaCodec.routed(routed))
+    sys.env.get("AWFL_TYPED_SCHEMA_FIXTURE_PATH").foreach { filepath =>
+      java.nio.file.Files.writeString(java.nio.file.Path.of(filepath), encoded + "\n")
+    }
+    assert(encoded.contains("\"additionalProperties\":false"))
+    assert(!encoded.contains("secret-route"))
+    assert(JsonSchemaCodec.render(Map("z" -> 1, "a" -> Map("y" -> 1, "b" -> 2))) ==
+      "{\"a\":{\"b\":2,\"y\":1},\"z\":1}")
+    assert(JsonSchemaCodec.render(Map("quotes" -> "\"\\\n")) ==
+      "{\"quotes\":\"\\\"\\\\\\n\"}")
+    println("AWFL_JSON_SCHEMA_PASS primitives/DSL wrappers/options/maps/sums/contextual/legacy-fail-closed/canonical")

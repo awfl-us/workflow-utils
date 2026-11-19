@@ -123,6 +123,21 @@ object JsonSchema:
   inline def functionForIsta[T: Spec](ista: Ista[T])(using kala: KalaVibhaga): ModelFunction =
     function[T](ista.name, ista.description(kala))
 
+  /**
+    * Fully structured typed schema; the compiler lowers the derived object
+    * directly as a map literal, without serializing JSON and re-decoding it.
+    * Existing ToolFunctionDef/Tool/ChatArgs remain the wire envelope.
+    */
+  inline def nativeTool[T](name: String, description: String): Llm.Tool =
+    val parameters = derive[T].toJsonValue
+    require(parameters.get("type").contains("object"), "Tool parameters must be a JSON object schema")
+    Llm.Tool(function = obj(Llm.ToolFunctionDef(
+      str(name), str(description), obj(parameters)
+    )))
+
+  inline def nativeToolForIsta[T: Spec](ista: Ista[T])(using kala: KalaVibhaga): Llm.Tool =
+    nativeTool[T](ista.name, ista.description(kala))
+
   /** Converts ONLY exactly representable schema nodes into the legacy Llm.ToolDefProperty.
     * Legacy properties cannot encode `oneOf`, nullability or typed map values.
     * Returning a weaker schema here would let model arguments escape validation.
