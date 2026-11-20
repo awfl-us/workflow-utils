@@ -97,11 +97,11 @@ object Yoj:
 case class Ista[T: Spec](
   name: String,
   build: KalaVibhaga => Step[ChatMessage, ListValue[ChatMessage]],
-  description: KalaVibhaga => String = _ => ""
+  description: KalaVibhaga => String,
+  toolSchema: KalaVibhaga => us.awfl.services.Llm.Tool
 ) {
-  /** Model-facing tool schema derived from T; workflow identity is not exposed. */
-  inline def tool(kala: KalaVibhaga): us.awfl.services.Llm.Tool =
-    JsonSchema.nativeTool[T](name, description(kala))
+  /** Schema created by the inline Ista factory at a concrete call site. */
+  def tool(kala: KalaVibhaga): us.awfl.services.Llm.Tool = toolSchema(kala)
 
   def convoCollection(sessionId: Value[String]) = str(("convo.sessions/": Cel) + sessionId.cel + "/" + name)
 
@@ -150,6 +150,19 @@ case class Ista[T: Spec](
     Block(s"${name}_readIstaBlock", List[Step[_, _]](log, results, forItems) -> forItems.resultValue)
   }
 }
+object Ista {
+  /** Keep the original wip-old design: derive T's tool schema when an
+    * Ista[T] is constructed, not inside a generic Sadhaka[Out] consumer.
+    * Use our current strict JSON Schema instead of the legacy property type.
+    */
+  inline def apply[T: Spec](
+    name: String,
+    build: KalaVibhaga => Step[ChatMessage, ListValue[ChatMessage]],
+    description: KalaVibhaga => String = _ => ""
+  ): Ista[T] = Ista(name, build, description,
+    kala => JsonSchema.nativeTool[T](name, description(kala)))
+}
+
 // Iṣṭaḥ — "That which is desired or intended."
 // A target or goal that the system wishes to extract or realize from context.
 
@@ -205,4 +218,25 @@ case class TermKala(termBegin: Value[Double], termEnd: Value[Double]) extends Ka
   override def *(times: Int): KalaVibhaga = TermKala(Value(termEnd.cel - ((termEnd.cel - termBegin.cel) * times)), termEnd)
   override def log(name: String): Log = Log(name, str(("TermKala: ": Cel) + time.format( termEnd.cel, "America/New_York")))
   override val end: Value[Double] = termEnd
+}
+
+/** Typed completion contract from wip-old. The concrete implementation lives
+  * with EventHandler so it can use the currently configured workflow engine.
+  */
+trait Sadhaka[Params] {
+  def complete[In: Yoj, Out: Ista: Spec](
+    query: String,
+    workflowName: Value[String]
+  )(using kala: KalaVibhaga): Step[Sadhaka.Response[Out], Value[Sadhaka.Response[Out]]]
+}
+
+object Sadhaka {
+  /** ChatToolResponse now has a concrete ChatMessage field. Keep the old
+    * result shape (message and cost), but give message the requested type.
+    */
+  case class Response[Out](
+    message: Value[Out],
+    total_cost: Value[Double],
+    usage: Value[us.awfl.services.Llm.Usage]
+  )
 }
