@@ -42,7 +42,11 @@ trait Strider[In, Params, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[O
 
   val strideStep = Convo.inSession[Out]("inSession", Env.sessionId) {
     val key = Locks.key(ista.name)
-    val owner: Value[String] = Value(uuid.generate())
+    // Value(uuid.generate()) is an expression, not a memoized value: passing
+    // it to both HTTP effects evaluates two different UUIDs. Materialize it
+    // once so an owner-scoped release can actually delete the acquired lock.
+    val ownerStep = Try("lock_owner", List() -> Value[String](uuid.generate()))
+    val owner: Value[String] = ownerStep.resultValue
     val acquired = Locks.acquireBool("lock_acquire", key, owner, 300)
 
     val messagesInWindow = summon[Yoj[ChatMessage]].build(using StriderObj.segmentKala)
@@ -113,7 +117,7 @@ trait Strider[In, Params, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[O
       (true: Cel) -> (List() -> Value("null"))
     ))
 
-    List[Step[_, _]](acquired, runIfAcquired) -> runIfAcquired.resultValue
+    List[Step[_, _]](ownerStep, acquired, runIfAcquired) -> runIfAcquired.resultValue
   }
 
   override def workflows = List(
