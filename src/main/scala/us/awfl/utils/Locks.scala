@@ -50,6 +50,22 @@ object Locks {
     Key(collection, id)
   }
 
+  /** Runtime Kala values (for example, values loaded from a workflow result)
+    * use the original wip-old ADT Match rather than requiring a Scala-side
+    * KalaVibhaga case class at workflow construction time. Existing
+    * sessionKey(using KalaVibhaga) remains unchanged for ordinary callers.
+    */
+  def buildSessionKey(familyName: String, k: Value[KalaVibhaga]): Step[Key, Value[Key]] = {
+    val collection = str(s"locks.${familyName}.Session")
+    val matchId = Match("matchId", k) {
+      case SegKala(sessionId, _, _)  => List() -> sessionId
+      case SessionKala(sessionId, _) => List() -> sessionId
+      case WeekKala(_)               => List() -> str("global")
+      case TermKala(_, _)            => List() -> str("global")
+    }
+    Try("sessionKeyTry", List(matchId) -> obj(Key(collection, matchId.resultValue)))
+  }
+
   // Acquire the lock with TTL; return acquired=true/false, mapping 409 to false.
   def acquireBool(stepName: String, key: Key, owner: Value[String], ttlSeconds: Int = 300): Try[Boolean, Value[Boolean]] = {
     val acquire = Firebase.acquireLock(stepName, key.collection, key.id, owner, ttlSeconds)

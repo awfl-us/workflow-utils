@@ -56,6 +56,18 @@ object TopicContextYoj {
     case term: TermKala    => Ctx.termKala(term.termBegin, term.end)
   }
 
+  /** Recovered from wip-old: encode an opaque Scala ADT value dynamically.
+    * Context.segKala and siblings now return BaseValue[Kala], so retain those
+    * wrappers instead of applying an unnecessary second obj(...).
+    */
+  def encodeKalaVal(k: Value[KalaVibhaga]): Step[Ctx.Kala, Value[Ctx.Kala]] =
+    Match("encodeKalaVal", k) {
+      case seg: SegKala      => List() -> Ctx.segKala(seg.sessionId, seg.end, seg.windowSeconds)
+      case sesh: SessionKala => List() -> Ctx.sessionKala(sesh.sessionId, sesh.end)
+      case week: WeekKala    => List() -> Ctx.weekKala(week.end)
+      case term: TermKala    => List() -> Ctx.termKala(term.termBegin, term.end)
+    }
+
   case class TopicArgs(
     kala: BaseValue[Ctx.Kala],
     presetId: Value[String] = Value("null"),

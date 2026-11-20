@@ -33,7 +33,7 @@ ThisBuild / version ~= { v =>
 
 // Dependencies
 libraryDependencies ++= Seq(
-  "us.awfl" %% "dsl" % "0.3.5"
+  "us.awfl" %% "dsl" % "0.3.6"
 )
 
 // dependencyOverrides += "us.awfl" %% "dsl" % "0.1.0-SNAPSHOT"

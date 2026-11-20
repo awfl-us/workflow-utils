@@ -173,7 +173,7 @@ object Ista {
 // कालविभागः — समयस्य विभागः, त्रैकालिकविभाजनम्। 
 // संवादी प्रक्रमायाः कालपरिमाणनुसारं विभागः। 
 // उदाहरणतः, खण्डः (Segment), सत्यम् (Session), त्रिमासिकम् (Quarter) इत्यादयः।
-sealed trait KalaVibhaga {
+sealed trait KalaVibhaga extends IsAdt {
   def collection(name: String): Value[String]
   def *(times: Int): KalaVibhaga
   def log(name: String): Log
