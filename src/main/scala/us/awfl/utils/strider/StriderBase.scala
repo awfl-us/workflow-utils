@@ -97,7 +97,18 @@ trait Strider[In, Params, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[O
     val runIfAcquired = Switch("lock_switch", List(
       (acquired.resultValue === Value(true)) -> {
         val workBlock = Block("work_block", List[Step[_, _]](messagesInWindow, check, workSwitch) -> workSwitch.resultValue)
-        List[Step[_, _]](workBlock, release) -> workBlock.resultValue
+        // Release our owner-scoped lock even when context construction,
+        // typed Sadhaka completion, or the Ista write fails. Otherwise the
+        // next Strider run for the segment waits for the five-minute TTL.
+        val workAndRelease = Try(
+          "strider_work_and_release",
+          List[Step[_, _]](workBlock, release) -> workBlock.resultValue,
+          err => List[Step[_, _]](
+            Locks.release("lock_release_failure", key, owner),
+            Raise("strider_work_rethrow", err)
+          ) -> Value.nil[Out]
+        )
+        List[Step[_, _]](workAndRelease) -> workAndRelease.resultValue
       },
       (true: Cel) -> (List() -> Value("null"))
     ))
