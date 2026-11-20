@@ -13,17 +13,17 @@ import us.awfl.utils.Segments
 import us.awfl.utils.Chainable
 import us.awfl.utils.Env
 
-trait ConvoStrider[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out])
-    extends Strider[In, Out] with Chainable {
+trait ConvoStrider[In, Params, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out], sadhaka: us.awfl.utils.Sadhaka[Params])
+    extends Strider[In, Params, Out] with Chainable {
   override def kala: KalaVibhaga = StriderObj.segmentKala
 
-  def apply(stepName: String, windowSeconds: Int = Segments.DefaultWindowSeconds, overlapSeconds: Int = Segments.DefaultOverlapSeconds): Post[Nothing] = {
+  def apply(stepName: String, agentId: Value[String], windowSeconds: Int = Segments.DefaultWindowSeconds, overlapSeconds: Int = Segments.DefaultOverlapSeconds): Post[Nothing] = {
     val segments = Segments.forSession("segmentsForSession", Env.sessionId, Value(windowSeconds), Value(overlapSeconds))
     val segment = segments.resultValue(len(segments.resultValue) - 1)
     
     val args = RunWorkflowArgs(
       str(s"${name}-SegKala$${WORKFLOW_ENV}"),
-      obj(StriderInput(segment.flatMap(_.end), Value(windowSeconds), Value(overlapSeconds))),
+      obj(StriderInput[Params](agentId, segment.flatMap(_.end), Value(windowSeconds), Value(overlapSeconds))),
       connector_params = ConnectorParams(true)
     )
     val call: Post[Nothing] = Call(
@@ -36,17 +36,17 @@ trait ConvoStrider[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out]
   }
 }
 
-trait SessionStrider[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out])
-    extends Strider[In, Out] {
+trait SessionStrider[In, Params, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out], sadhaka: us.awfl.utils.Sadhaka[Params])
+    extends Strider[In, Params, Out] {
   override def kala: KalaVibhaga = StriderObj.segmentKala.session
 }
 
-trait WeekStrider[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out])
-    extends Strider[In, Out] {
+trait WeekStrider[In, Params, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out], sadhaka: us.awfl.utils.Sadhaka[Params])
+    extends Strider[In, Params, Out] {
   override def kala: KalaVibhaga = StriderObj.segmentKala.week
 }
 
-trait TermStrider[In, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out])
-    extends Strider[In, Out] {
+trait TermStrider[In, Params, Out](using spec: Spec[Out], yoj: Yoj[In], ista: Ista[Out], sadhaka: us.awfl.utils.Sadhaka[Params])
+    extends Strider[In, Params, Out] {
   override def kala: KalaVibhaga = StriderObj.segmentKala.term
 }

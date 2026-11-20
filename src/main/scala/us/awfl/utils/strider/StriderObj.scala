@@ -16,7 +16,7 @@ import us.awfl.utils.SegKala
 import us.awfl.utils.Env
 
 object StriderObj {
-  val inputVal = init[StriderInput]("input")
+  val inputVal = init[StriderInput[Nothing]]("input")
   val input = inputVal.get
   given Convo.SessionId = Convo.SessionId(Env.sessionId)
 

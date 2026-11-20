@@ -11,6 +11,7 @@ import us.awfl.utils.Segments
 import us.awfl.utils.TopicContextYoj
 import us.awfl.services.Firebase.create
 import us.awfl.services.Firebase.update
+import us.awfl.utils.Sadhaka
 import us.awfl.utils.Ista
 import us.awfl.utils.KalaVibhaga
 import us.awfl.utils.Timestamped
@@ -20,13 +21,13 @@ import us.awfl.utils.Env
 /**
  * Base Strider implementation with optional post-write hook for SegKala.
  */
-trait Strider[In, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[Out]) extends us.awfl.core.Workflow {
+trait Strider[In, Params, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[Out], sadhaka: Sadhaka[Params]) extends us.awfl.core.Workflow {
   import StriderObj.*
 
-  type Input = StriderInput
+  type Input = StriderInput[Params]
   type Result = Out
 
-  override val inputVal = StriderObj.inputVal
+  override val inputVal = init[StriderInput[Params]]("input")
 
   def name: String
 
@@ -51,18 +52,11 @@ trait Strider[In, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[Out]) ext
       ((len(check.resultValue) === 0) || (check.resultValue(len(check.resultValue) - 1).flatMap(_.create_time).cel < StriderObj.segmentKala.end))
     ))
 
-    val buildPrompt = buildList("buildPrompt", List(ChatMessage("system", str(prompt))))
-    val buildYoj = yoj.build
-    val complete = Convo.complete[In, Out](
-      "complete",
-      buildPrompt.resultValue,
-      buildYoj.resultValue,
-      Env.sessionId
-    )
+    val complete = sadhaka.complete[In, Out](prompt, inputVal.flatMap(_.agentId))
 
     val doWriteSeg: Step[Out, BaseValue[Out]] = {
       val newId        = Try("ista_write_newId", List() -> Value[String](uuid.generate()))
-      val payload      = obj(us.awfl.utils.Timestamped(complete.result.result, StriderObj.segmentKala.end, complete.result.total_cost))
+      val payload      = obj(us.awfl.utils.Timestamped(complete.result.message, StriderObj.segmentKala.end, complete.result.total_cost))
       val createChild  = create("ista_write_create_child", ista.convoCollection(Env.sessionId), newId.resultValue, payload)
       val updateParent = update(
         "ista_write_update_parent_update_time",
@@ -72,17 +66,17 @@ trait Strider[In, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[Out]) ext
       )
       val post = Block(
         "post_write_block",
-        postWriteSteps(Env.sessionId, newId.resultValue, complete.result.result, StriderObj.segmentKala.end) -> newId.resultValue
+        postWriteSteps(Env.sessionId, newId.resultValue, complete.result.message, StriderObj.segmentKala.end) -> newId.resultValue
       )
       Block(
         "do_write_seg_block",
-        List[Step[_, _]](newId, createChild, updateParent, post) -> complete.resultValue.flatMap(_.result)
+        List[Step[_, _]](newId, createChild, updateParent, post) -> complete.resultValue.flatMap(_.message)
       )
     }
 
     val doWriteOther: Step[Out, BaseValue[Out]] = {
-      val write = ista.write("writeIstaResult", complete.result.result, StriderObj.segmentKala.end, complete.result.total_cost)
-      Block("do_write_other_block", List[Step[_, _]](write) -> complete.resultValue.flatMap(_.result))
+      val write = ista.write("writeIstaResult", complete.result.message, StriderObj.segmentKala.end, complete.result.total_cost)
+      Block("do_write_other_block", List[Step[_, _]](write) -> complete.resultValue.flatMap(_.message))
     }
 
     val doWrite = summon[KalaVibhaga] match {
@@ -93,7 +87,7 @@ trait Strider[In, Out](using yoj: Yoj[In], ista: Ista[Out], spec: Spec[Out]) ext
     val workSwitch = Switch(
       "ista_write_switch",
       List(
-        shouldWrite.cel -> (List[Step[_, _]](buildPrompt, buildYoj, complete, doWrite) -> doWrite.resultValue),
+        shouldWrite.cel -> (List[Step[_, _]](complete, doWrite) -> doWrite.resultValue),
         (true: Cel) -> (List(Log("write_skipped", str("Summary already exists or no messages. Skipping write."))) -> Value("null"))
       )
     )

@@ -9,7 +9,8 @@ import us.awfl.utils.{Env, ENV}
 /**
  * Strider workflow input parameters and handy accessors.
  */
-case class StriderInput(
+case class StriderInput[Params](
+  agentId: Value[String],
   segmentEnd: Value[Double] = Value.nil,
   windowSeconds: Value[Int] = Value(Segments.DefaultWindowSeconds),
   overlapSeconds: Value[Int] = Value(Segments.DefaultOverlapSeconds),
