@@ -145,7 +145,11 @@ case class Ista[T: Spec](
       case TermKala(begin, end)                    => list(s"read_${name}Ista_QuaterKala", str(("log.terms.": Cel) + name), begin, end)
     }
     val forItems = For[ListItem[Timestamped[T]], Timestamped[T]](s"for_${name}Ista", results.resultValue.flatMap(_.documents)) { item =>
-      List(Log(s"log_${name}Ista_read", str(("Read items: ": Cel) + json.encode_to_string( item.cel)))) -> item.flatMap(_.data)
+      // Reading a stored summary/topic can exceed the authenticated native
+      // log.write text limit. Never emit unbounded document contents (or
+      // private conversation data) as a log side effect just to read Ista.
+      // The kala and HTTP read itself are already instrumented separately.
+      List[Step[_, _]]() -> item.flatMap(_.data)
     }
     Block(s"${name}_readIstaBlock", List[Step[_, _]](log, results, forItems) -> forItems.resultValue)
   }
