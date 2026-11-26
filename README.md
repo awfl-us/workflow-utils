@@ -214,3 +214,7 @@ Issues and pull requests are welcome. If you plan a larger change, please open a
 License
 
 MIT License — see LICENSE
+
+### Agent response streaming contract
+
+`Llm.chatWithTools` and `Convo.completeWithTools` accept an optional `streamResponse` DSL boolean (default false). Jobs only streams eligible foreground text completions when a live transport is configured. The final `ChatMessage.responseId` is a server-issued correlation ID, independent of Ista's document ID; preserve it when persisting a completed message. `Events.enqueueResponse` accepts the same optional ID for the legacy post-persistence event. Internal/typed/background callers should leave streaming disabled. No provider prompt or usage semantics depend on the ID. See the server agent-response-streaming plan for release gates.

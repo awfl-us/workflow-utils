@@ -47,7 +47,8 @@ object Convo {
     toolChoice: BaseValue[ToolChoice] = ToolChoice.auto,
     model: Value[String] = str("gpt-4o"),
     temperature: Double = 0.8,
-    maxTokens: BaseValue[Int] = Value("null")
+    maxTokens: BaseValue[Int] = Value("null"),
+    streamResponse: Value[Boolean] = Value(false)
   ): Step[ChatToolResponse, Value[ChatToolResponse]] = {
     val messages = join(s"${name}_joinMessages", prompt, yoj)
     val chat = us.awfl.services.Llm.chatWithTools(
@@ -58,7 +59,8 @@ object Convo {
       tool_choice = toolChoice,
       model = model,
       temperature = temperature,
-      maxTokens = maxTokens
+      maxTokens = maxTokens,
+      streamResponse = streamResponse
     )
     val switch = Switch(s"${name}_switch", List(
       (len(yoj) > 0) -> (List[Step[_, _]](messages, chat) -> chat.resultValue),

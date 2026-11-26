@@ -43,7 +43,10 @@ case class ChatMessage(
   create_time: Value[Double] = Value(time.now()),
   // When includeDocId=true on TopicContextYoj, messages sourced from Firestore may include docId.
   // Use Value("null") to omit when not provided.
-  docId: Value[String] = Value("null")
+  docId: Value[String] = Value("null"),
+  // Server-issued correlation for transient assistant output; distinct from
+  // the Ista storage document ID and never part of the provider prompt.
+  responseId: Value[String] = Value("null")
 )
 
 object ChatMessage:

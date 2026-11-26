@@ -49,7 +49,8 @@ object Llm {
     workflow_name: Value[String],
     tools: ListValue[Tool] = ListValue.empty,
     tool_choice: BaseValue[ToolChoice] = ToolChoice.auto,
-    validate_tool_arguments: Boolean = false
+    validate_tool_arguments: Boolean = false,
+    stream_response: Value[Boolean] = Value(false)
   )
 
   // Server returns { result, usage, total_cost }
@@ -103,6 +104,7 @@ object Llm {
     model: Value[String] = str("gpt-4o"),
     temperature: Double = 0.8,
     maxTokens: BaseValue[Int] = Value.nil,
+    streamResponse: Value[Boolean] = Value(false),
   ): Step[ChatToolResponse, Value[ChatToolResponse]] = {
     val toolChoice = Switch("toolChoice", List(
       ((tools.cel !== Cel.nil) && (core.len( tools) > 0)) ->  (List() -> tool_choice),
@@ -110,7 +112,7 @@ object Llm {
     ))
     // Tool-enabled calls opt into server-side JSON Schema validation. Normal
     // text/JSON completions retain the previous default without tool checks.
-    val body = ChatArgs(messages, model, temperature, maxTokens, ResponseFormat("text"), sessionId, WORKFLOW_ID, tools, toolChoice.resultValue, true)
+    val body = ChatArgs(messages, model, temperature, maxTokens, ResponseFormat("text"), sessionId, WORKFLOW_ID, tools, toolChoice.resultValue, true, streamResponse)
     val request = post[ChatArgs, ChatToolResponse](name, "llm/chat", obj(body), Auth()).flatMap(_.body)
     Block("chatBlock", List[Step[_, _]](toolChoice, request) -> request.resultValue)
   }

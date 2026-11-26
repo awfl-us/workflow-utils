@@ -19,7 +19,8 @@ object Events {
     timeout_seconds: Value[Int] = Value(60),
     // Optional status update fields (backward-compatible defaults)
     status: Value[String] = str(""),
-    error: Value[String] = Value.nil
+    error: Value[String] = Value.nil,
+    responseId: Value[String] = Value.nil
   )
 
   // Relay ingest body wrapper
@@ -61,6 +62,7 @@ object Events {
     // Optional status and error for status updates
     status: Value[String] = str(""),
     error: Value[String] = Value.nil,
+    responseId: Value[String] = Value.nil,
   ): Step[NoValueT, BaseValue[NoValueT]] = {
     val opEnvelopeField = OperationEnvelope(
       create_time = Value(time.now()),
@@ -70,7 +72,8 @@ object Events {
       cost = cost,
       background = background,
       status = status,
-      error = error
+      error = error,
+      responseId = responseId
     )
 
     // POST to awfl-relay ingest endpoint: /workflows/events
